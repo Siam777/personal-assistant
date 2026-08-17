@@ -87,34 +87,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
-| SEC-04 | TBD | Pending |
-| SEC-05 | TBD | Pending |
-| VAULT-01 | TBD | Pending |
-| VAULT-02 | TBD | Pending |
-| VAULT-03 | TBD | Pending |
-| VAULT-04 | TBD | Pending |
-| VAULT-05 | TBD | Pending |
-| ORG-01 | TBD | Pending |
-| ORG-02 | TBD | Pending |
-| ORG-03 | TBD | Pending |
-| TRUST-01 | TBD | Pending |
-| TRUST-02 | TBD | Pending |
-| TRUST-03 | TBD | Pending |
-| BACKUP-01 | TBD | Pending |
-| BACKUP-02 | TBD | Pending |
-| OCR-01 | TBD | Pending |
-| OCR-02 | TBD | Pending |
-| OCR-03 | TBD | Pending |
-| OCR-04 | TBD | Pending |
+| SEC-01 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Pending |
+| SEC-04 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Pending |
+| VAULT-01 | Phase 2 | Pending |
+| VAULT-02 | Phase 2 | Pending |
+| VAULT-03 | Phase 2 | Pending |
+| VAULT-04 | Phase 2 | Pending |
+| VAULT-05 | Phase 2 | Pending |
+| ORG-01 | Phase 2 | Pending |
+| ORG-02 | Phase 2 | Pending |
+| ORG-03 | Phase 2 | Pending |
+| TRUST-01 | Phase 3 | Pending |
+| TRUST-02 | Phase 3 | Pending |
+| TRUST-03 | Phase 3 | Pending |
+| BACKUP-01 | Phase 3 | Pending |
+| BACKUP-02 | Phase 3 | Pending |
+| OCR-01 | Phase 4 | Pending |
+| OCR-02 | Phase 4 | Pending |
+| OCR-03 | Phase 4 | Pending |
+| OCR-04 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 22 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 22 ⚠️ (expected — roadmap not yet created)
+- Mapped to phases: 22/22 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-08-18*
-*Last updated: 2026-08-18 after initial definition*
+*Last updated: 2026-08-18 after roadmap creation*
