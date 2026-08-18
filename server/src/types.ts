@@ -36,3 +36,26 @@ export interface VaultStatus {
   totpEnabled: boolean;
   idleTimeoutMs: number;
 }
+
+/**
+ * Returned by `POST /api/vault/2fa/enroll` (Plan 01-04). `secret` is the
+ * base32 TOTP secret in plaintext — the one place it ever leaves the server,
+ * and only to the same local user who already holds an unlocked vault. It is
+ * never persisted in this form; a confirmed enrollment stores only the
+ * Vault-Key-wrapped ciphertext.
+ */
+export interface EnrollmentStart {
+  enrollmentId: string;
+  qrDataUrl: string;
+  secret: string;
+}
+
+/**
+ * Returned by `POST /api/vault/2fa/confirm` and by backup-code regeneration
+ * (Plan 01-04). `backupCodes` are plaintext and exist in exactly this one
+ * response body — the sidecar stores only their SHA-256 digests, and no
+ * endpoint ever returns them again.
+ */
+export interface EnrollmentResult {
+  backupCodes: string[];
+}

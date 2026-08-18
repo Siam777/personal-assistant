@@ -15,5 +15,10 @@
     "build:server": "tsc -p server/tsconfig.json",
     "bench:kdf": "npm run build:server && node server/dist/scripts/bench-kdf.js",
     "dev": "node scripts/dev.mjs"
+  },
+  "allowScripts": {
+    "argon2@0.45.1": true,
+    "better-sqlite3-multiple-ciphers@12.11.1": true,
+    "esbuild@0.28.2": true
   }
 }
