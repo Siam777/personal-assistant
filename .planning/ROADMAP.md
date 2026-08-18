@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can enable optional TOTP-based 2FA, and once enabled must supply both the master password and a valid TOTP code to unlock.
   4. After a period of inactivity, the vault locks automatically and the in-memory session key is destroyed — decrypted data is inaccessible until the vault is unlocked again.
 
-**Plans**: 2/4 plans executed
+**Plans**: 3/4 plans executed
 
 Plans:
 **Wave 1**
@@ -46,7 +46,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Unlock, indistinguishable rejection, and a provably real five-minute auto-lock
+- [x] 01-03-PLAN.md — Unlock, indistinguishable rejection, and a provably real five-minute auto-lock
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -109,7 +109,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Vault Setup & Unlock | 2/4 | In Progress|  |
+| 1. Secure Vault Setup & Unlock | 3/4 | In Progress|  |
 | 2. Vault Core — Entries, Organization & Search | 0/TBD | Not started | - |
 | 3. Trust, Backup & Recovery | 0/TBD | Not started | - |
 | 4. OCR Lens Module | 0/TBD | Not started | - |
