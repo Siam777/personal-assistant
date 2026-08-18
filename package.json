@@ -14,7 +14,8 @@
     "test": "npm run test:server && npm run test:client",
     "build:server": "tsc -p server/tsconfig.json",
     "bench:kdf": "npm run build:server && node server/dist/scripts/bench-kdf.js",
-    "dev": "node scripts/dev.mjs"
+    "dev": "node scripts/dev.mjs",
+    "verify:dev-shutdown": "node scripts/verify-dev-shutdown.mjs"
   },
   "allowScripts": {
     "argon2@0.45.1": true,
