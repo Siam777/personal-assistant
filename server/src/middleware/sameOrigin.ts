@@ -15,9 +15,10 @@ import { logError } from "../log.js";
  * `GET`/`HEAD`/`OPTIONS` are read-only and left alone. Every other method
  * must either carry no `Origin` header at all (non-browser clients — curl,
  * this project's own test harness, neither of which ever sets one) or an
- * `Origin` that matches `config.ALLOWED_ORIGIN` exactly — the Vite dev
+ * `Origin` that is a member of `config.ALLOWED_ORIGINS` — the Vite dev
  * server, the only legitimate same-origin caller in this project's current
- * single-environment topology.
+ * single-environment topology, reachable as either `127.0.0.1` or
+ * `localhost`.
  */
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -32,7 +33,7 @@ export function requireSameOriginForMutations(
   }
 
   const origin = req.headers.origin;
-  if (origin !== undefined && origin !== config.ALLOWED_ORIGIN) {
+  if (origin !== undefined && !config.ALLOWED_ORIGINS.has(origin)) {
     logError("rejected cross-origin state-changing request", {
       method: req.method,
       path: req.path,

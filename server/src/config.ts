@@ -15,17 +15,28 @@ export const HOST = "127.0.0.1";
 export const PORT = 5174;
 
 /**
- * The only Origin a browser-sent state-changing request may legitimately
+ * The only Origins a browser-sent state-changing request may legitimately
  * carry (WR-04) — the Vite dev server (`client/vite.config.ts`) that proxies
  * `/api` to this server, same-origin from the browser's perspective. The
  * loopback bind (D-02) stops other *machines* from reaching this API but
  * does nothing to stop a malicious page open in another tab of the same
  * browser from POSTing here directly; rejecting any request whose `Origin`
- * header is present and does not match this value closes that gap without
+ * header is present and matches neither value closes that gap without
  * affecting non-browser clients (curl, tests), which never send an `Origin`
  * header at all.
+ *
+ * Both `127.0.0.1` and `localhost` resolve to the same loopback interface
+ * Vite's dev server binds to (`host: "127.0.0.1"` in vite.config.ts still
+ * accepts `localhost` connections on Windows/macOS/most Linux resolver
+ * configs) — a user who types either address into the browser is hitting
+ * the same, single legitimate dev server, not a different origin. Listing
+ * only one form rejected the other's real browser traffic as a false
+ * positive "Forbidden", caught in Phase 1 human UAT.
  */
-export const ALLOWED_ORIGIN = `http://127.0.0.1:5173`;
+export const ALLOWED_ORIGINS = new Set([
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+]);
 
 /**
  * Root directory for the vault's on-disk files. Overridable via the

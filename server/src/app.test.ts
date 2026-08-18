@@ -90,22 +90,29 @@ describe("requireSameOriginForMutations (WR-04)", () => {
     expect(res.status).toBe(400);
   });
 
-  it("allows a POST whose Origin matches config.ALLOWED_ORIGIN", async () => {
-    await start();
+  it.each([...config.ALLOWED_ORIGINS])(
+    "allows a POST whose Origin is %s (member of config.ALLOWED_ORIGINS)",
+    async (allowedOrigin) => {
+      await start();
 
-    const res = await fetch(`${baseUrl}/api/vault/init`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Origin: config.ALLOWED_ORIGIN,
-      },
-      body: JSON.stringify({}),
-    });
+      const res = await fetch(`${baseUrl}/api/vault/init`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: allowedOrigin,
+        },
+        body: JSON.stringify({}),
+      });
 
-    // Same-origin request reaches route-level validation (400 for a
-    // malformed body), not the 403 same-origin gate.
-    expect(res.status).toBe(400);
-  });
+      // Same-origin request reaches route-level validation (400 for a
+      // malformed body), not the 403 same-origin gate. Both 127.0.0.1 and
+      // localhost must pass here — a browser opened against either address
+      // is hitting the same dev server (the bug this regression-tests:
+      // Phase 1 human UAT caught a real "Forbidden" on http://localhost:5173
+      // when only 127.0.0.1 was allow-listed).
+      expect(res.status).toBe(400);
+    }
+  );
 
   it("never blocks GET regardless of Origin", async () => {
     await start();
