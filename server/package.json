@@ -1,0 +1,31 @@
+{
+  "name": "server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0 <21"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "better-sqlite3-multiple-ciphers": "^12.11.1",
+    "argon2": "^0.45.1",
+    "otplib": "^13.4.1",
+    "qrcode": "^1.5.4",
+    "kysely": "^0.28.7",
+    "zod": "^4.4.3",
+    "@zxcvbn-ts/core": "^4.2.0",
+    "@zxcvbn-ts/language-common": "^4.1.0",
+    "@zxcvbn-ts/language-en": "^4.1.1",
+    "express-rate-limit": "^8.6.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "eslint": "^9.39.1",
+    "vitest": "^3.2.4",
+    "@types/express": "^5.0.5",
+    "@types/node": "^20.19.28",
+    "@types/qrcode": "^1.5.5"
+  }
+}
