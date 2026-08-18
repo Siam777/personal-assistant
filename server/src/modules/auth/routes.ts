@@ -392,11 +392,16 @@ const reauthBodySchema = z.object({
  * Requires an unlocked session AND a freshly re-submitted master password
  * (D-06, T-04-05) — an already-unlocked session alone is deliberately not
  * sufficient, which is precisely the walked-away-from-machine case this
- * guards against.
+ * guards against. Also behind `unlockRateLimit` (WR-05): this reauth check
+ * re-derives the Master Key exactly like `/unlock` does — a full
+ * guess-and-check oracle — and Argon2id's cost alone permits far more
+ * guesses/minute than `/unlock`'s throttle deliberately allows, unless the
+ * same limiter is applied here too.
  */
 vaultRouter.post(
   "/2fa/disable",
   requireUnlocked,
+  unlockRateLimit,
   validate(reauthBodySchema),
   (req, res, next) => {
     void (async () => {
@@ -412,9 +417,15 @@ vaultRouter.post(
   }
 );
 
+/**
+ * Requires an unlocked session AND a freshly re-submitted master password
+ * (D-06), and behind `unlockRateLimit` for the same reason `/2fa/disable`
+ * is (WR-05).
+ */
 vaultRouter.post(
   "/2fa/backup-codes/regenerate",
   requireUnlocked,
+  unlockRateLimit,
   validate(reauthBodySchema),
   (req, res, next) => {
     void (async () => {

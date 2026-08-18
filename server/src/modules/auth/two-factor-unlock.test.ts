@@ -114,6 +114,14 @@ function postDisable(baseUrl: string, masterPassword: string): Promise<Response>
   });
 }
 
+function postRegenerate(baseUrl: string, masterPassword: string): Promise<Response> {
+  return fetch(`${baseUrl}/api/vault/2fa/backup-codes/regenerate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ masterPassword }),
+  });
+}
+
 // High-entropy, not dictionary words — score well above MIN_PASSWORD_SCORE.
 const STRONG_PASSWORD = randomBytes(32).toString("base64url");
 const WRONG_PASSWORD = randomBytes(32).toString("base64url");
@@ -442,5 +450,36 @@ describe("two-factor unlock", () => {
       expect(singleFactorUnlockRes.status).toBe(200);
     },
     20000
+  );
+
+  it(
+    "throttles repeated /2fa/disable and /2fa/backup-codes/regenerate reauth attempts the same way /unlock is throttled (WR-05)",
+    async () => {
+      const enrolled = await setupEnrolledLockedVault();
+      harness = enrolled.harness;
+
+      const code = await generate({ secret: enrolled.secret });
+      const unlockRes = await postUnlock(harness.baseUrl, STRONG_PASSWORD, code);
+      expect(unlockRes.status).toBe(200);
+
+      let lastDisableRes: Response | undefined;
+      for (let i = 0; i < 15; i++) {
+        lastDisableRes = await postDisable(harness.baseUrl, WRONG_PASSWORD);
+      }
+      expect(lastDisableRes).toBeDefined();
+      expect(lastDisableRes?.status).toBe(401);
+      const disableBody: unknown = await lastDisableRes?.json();
+      expect(disableBody).toEqual({ error: "Unable to unlock" });
+
+      let lastRegenerateRes: Response | undefined;
+      for (let i = 0; i < 15; i++) {
+        lastRegenerateRes = await postRegenerate(harness.baseUrl, WRONG_PASSWORD);
+      }
+      expect(lastRegenerateRes).toBeDefined();
+      expect(lastRegenerateRes?.status).toBe(401);
+      const regenerateBody: unknown = await lastRegenerateRes?.json();
+      expect(regenerateBody).toEqual({ error: "Unable to unlock" });
+    },
+    30000
   );
 });
