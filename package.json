@@ -1,0 +1,19 @@
+{
+  "name": "personal-assistant",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p server/tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test:server": "vitest run --root server",
+    "test:client": "vitest run --root client --passWithNoTests",
+    "test": "npm run test:server && npm run test:client",
+    "build:server": "tsc -p server/tsconfig.json",
+    "bench:kdf": "npm run build:server && node server/dist/scripts/bench-kdf.js",
+    "dev": "node scripts/dev.mjs"
+  }
+}
