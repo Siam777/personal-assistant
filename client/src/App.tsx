@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { getStatus, type VaultStatus } from "./lib/api";
+import InitScreen from "./features/vault-unlock/InitScreen";
 
 /**
- * Fetches vault status on mount and renders the fields as plain text — the
- * thin end of the Walking Skeleton's tracer slice. Plan 01-02 turns this
- * into the router with real init/unlock screens.
+ * Fetches vault status on mount and routes between the first-run creation
+ * screen and an unlocked placeholder panel. Plan 01-03 replaces the
+ * placeholder with the real unlock and locked-state screens.
  */
 export default function App() {
   const [status, setStatus] = useState<VaultStatus | null>(null);
@@ -28,23 +29,46 @@ export default function App() {
     };
   }, []);
 
+  if (error) {
+    return (
+      <main>
+        <h1>Personal Assistant — Vault</h1>
+        <p role="alert">Error: {error}</p>
+      </main>
+    );
+  }
+
+  if (!status) {
+    return (
+      <main>
+        <h1>Personal Assistant — Vault</h1>
+        <p>Loading vault status…</p>
+      </main>
+    );
+  }
+
+  if (!status.initialized) {
+    return (
+      <main>
+        <h1>Personal Assistant — Vault</h1>
+        <InitScreen onInitialized={setStatus} />
+      </main>
+    );
+  }
+
+  if (status.unlocked) {
+    return (
+      <main>
+        <h1>Personal Assistant — Vault</h1>
+        <p>Vault unlocked. (The real unlocked view lands in Plan 01-03.)</p>
+      </main>
+    );
+  }
+
   return (
     <main>
       <h1>Personal Assistant — Vault</h1>
-      {error && <p role="alert">Error: {error}</p>}
-      {!error && !status && <p>Loading vault status…</p>}
-      {status && (
-        <dl>
-          <dt>Initialized</dt>
-          <dd>{String(status.initialized)}</dd>
-          <dt>Unlocked</dt>
-          <dd>{String(status.unlocked)}</dd>
-          <dt>TOTP enabled</dt>
-          <dd>{String(status.totpEnabled)}</dd>
-          <dt>Idle timeout (ms)</dt>
-          <dd>{status.idleTimeoutMs}</dd>
-        </dl>
-      )}
+      <p>Vault is locked. (The real unlock screen lands in Plan 01-03.)</p>
     </main>
   );
 }

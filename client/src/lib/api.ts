@@ -56,3 +56,45 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
   }
   return (await res.json()) as T;
 }
+
+/**
+ * Thrown specifically for a `POST /api/vault/init` 400 response so the
+ * caller can render the server's `score`/`feedback` fields rather than the
+ * generic error message.
+ */
+export class WeakPasswordError extends ApiError {
+  readonly score: number | undefined;
+  readonly feedback: string | undefined;
+
+  constructor(status: number, message: string, score?: number, feedback?: string) {
+    super(status, message);
+    this.name = "WeakPasswordError";
+    this.score = score;
+    this.feedback = feedback;
+  }
+}
+
+export async function initVault(
+  masterPassword: string,
+  noRecoveryAcknowledged: true
+): Promise<VaultStatus> {
+  const res = await fetch("/api/vault/init", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ masterPassword, noRecoveryAcknowledged }),
+  });
+
+  if (!res.ok) {
+    const body = (await res
+      .json()
+      .catch(() => ({}))) as { error?: string; score?: number; feedback?: string };
+    throw new WeakPasswordError(
+      res.status,
+      body.error ?? res.statusText,
+      body.score,
+      body.feedback
+    );
+  }
+
+  return (await res.json()) as VaultStatus;
+}
