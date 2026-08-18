@@ -1,7 +1,7 @@
 /**
- * Express router mounted at `/api/vault` by `app.ts`. This plan wires two
- * routes: the real `GET /status` and `POST /init`, the first-run
- * vault-creation path. Plans 01-03 and 01-04 add the rest.
+ * Express router mounted at `/api/vault` by `app.ts`. Wires the real
+ * `GET /status`, `POST /init` (Plan 01-02), and `POST /unlock` / `POST
+ * /lock` (this plan). Plan 01-04 adds 2FA enrollment/management routes.
  */
 
 import { randomBytes } from "node:crypto";
@@ -13,11 +13,13 @@ import { ZxcvbnFactory } from "@zxcvbn-ts/core";
 import * as zxcvbnCommonPackage from "@zxcvbn-ts/language-common";
 import * as zxcvbnEnPackage from "@zxcvbn-ts/language-en";
 import * as config from "../../config.js";
+import { vaultAuthError } from "../../middleware/errorHandler.js";
+import { unlockRateLimit } from "../../middleware/rateLimit.js";
 import { validate } from "../../middleware/validate.js";
 import type { VaultMeta, VaultStatus } from "../../types.js";
 import type { VaultDbSchema } from "../db/schema.js";
 import { initSchema, openVaultDb } from "../db/connection.js";
-import { deriveMasterKey, generateVaultKey, wrapKey } from "./crypto.js";
+import { deriveMasterKey, generateVaultKey, unwrapKey, wrapKey } from "./crypto.js";
 import * as session from "./session.js";
 import {
   ensureVaultDir,
@@ -169,4 +171,116 @@ vaultRouter.post("/init", validate(initBodySchema), (req, res, next) => {
       next(err);
     }
   })();
+});
+
+// The optional `totpCode` field is defined from this plan onward even
+// though nothing populates it until Plan 01-04 — see this plan's
+// <assumption_delta_decision> block. Submitting it now avoids a later
+// request-contract migration.
+const unlockBodySchema = z.object({
+  masterPassword: z.string(),
+  totpCode: z.string().optional(),
+});
+
+vaultRouter.post(
+  "/unlock",
+  unlockRateLimit,
+  validate(unlockBodySchema),
+  (req, res, next) => {
+    void (async () => {
+      const { masterPassword } = req.body as z.infer<typeof unlockBodySchema>;
+
+      // A state fact the client already learns from GET /status, not a
+      // secret — the vault-does-or-doesn't-exist distinction is not part
+      // of the password-correctness oracle this route otherwise protects.
+      if (!vaultExists()) {
+        res.status(409).json({ error: "Vault does not exist" });
+        return;
+      }
+
+      if (session.isUnlocked()) {
+        const meta = readVaultMeta();
+        const status: VaultStatus = {
+          initialized: true,
+          unlocked: true,
+          totpEnabled: meta.totp.enabled,
+          idleTimeoutMs: config.IDLE_TIMEOUT_MS,
+        };
+        res.status(200).json(status);
+        return;
+      }
+
+      let masterKey: Buffer | null = null;
+      let db: Kysely<VaultDbSchema> | null = null;
+
+      try {
+        const meta = readVaultMeta();
+        const salt = Buffer.from(meta.kdf.saltB64, "base64");
+
+        // Key derivation runs before any check that could short-circuit
+        // the response — including the totp.enabled branch below — so
+        // response timing never becomes a second oracle alongside the
+        // auth-tag check inside unwrapKey.
+        masterKey = await deriveMasterKey(masterPassword, salt, {
+          memoryCost: meta.kdf.memoryCost,
+          timeCost: meta.kdf.timeCost,
+          parallelism: meta.kdf.parallelism,
+        });
+
+        // unwrapKey throws on an auth-tag mismatch — that throw IS the
+        // password-correctness oracle, caught below and converted to the
+        // single generic failure.
+        const vaultKey = unwrapKey(meta.wrappedVaultKey, masterKey);
+        db = openVaultDb(config.VAULT_DB_PATH, vaultKey);
+
+        if (meta.totp.enabled) {
+          // No second-factor verifier exists yet — Plan 01-04 supplies
+          // one. Fail closed rather than unlock a vault whose second
+          // factor cannot currently be checked.
+          throw vaultAuthError();
+        }
+
+        session.unlockSession(vaultKey, db);
+        db = null; // ownership transferred to the session singleton
+
+        masterKey.fill(0);
+        masterKey = null;
+
+        const status: VaultStatus = {
+          initialized: true,
+          unlocked: true,
+          totpEnabled: meta.totp.enabled,
+          idleTimeoutMs: config.IDLE_TIMEOUT_MS,
+        };
+        res.status(200).json(status);
+      } catch {
+        // Every failure on this route — auth-tag mismatch, a failed
+        // forcing read, an unreadable/malformed sidecar, or a bad second
+        // factor — collapses to the same byte-identical response. Never
+        // pass the original error through: even its type/shape could
+        // distinguish one failure cause from another.
+        if (masterKey) {
+          masterKey.fill(0);
+        }
+        if (db) {
+          try {
+            await db.destroy();
+          } catch {
+            // best-effort close; the vault stays locked either way
+          }
+        }
+        next(vaultAuthError());
+      }
+    })();
+  }
+);
+
+/**
+ * Safe to call when already locked and safe to call repeatedly — the
+ * client fires this from page lifecycle events that may or may not have a
+ * live session behind them (`session-signals.ts`).
+ */
+vaultRouter.post("/lock", (_req, res) => {
+  session.lock();
+  res.status(204).end();
 });
