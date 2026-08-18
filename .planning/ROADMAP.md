@@ -29,7 +29,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can unlock the vault by entering the correct master password; an incorrect password is rejected.
   3. User can enable optional TOTP-based 2FA, and once enabled must supply both the master password and a valid TOTP code to unlock.
   4. After a period of inactivity, the vault locks automatically and the in-memory session key is destroyed — decrypted data is inaccessible until the vault is unlocked again.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Scaffold the loopback-only full stack, the redacting logger, and the phase's type contracts
+- [ ] 01-02-PLAN.md — Tracer: a user creates a vault and it is really encrypted (Argon2id + AES-256-GCM envelope, keyed SQLite)
+- [ ] 01-03-PLAN.md — Unlock, indistinguishable rejection, and a provably real five-minute auto-lock
+- [ ] 01-04-PLAN.md — Optional TOTP 2FA with single-use backup codes and re-authenticated disable
 
 ### Phase 2: Vault Core — Entries, Organization & Search
 **Goal**: Users can store, organize, and find every kind of sensitive data they have (API keys, logins, notes, cards) in one trusted place.
@@ -79,7 +85,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Vault Setup & Unlock | 0/TBD | Not started | - |
+| 1. Secure Vault Setup & Unlock | 0/4 | Planned | - |
 | 2. Vault Core — Entries, Organization & Search | 0/TBD | Not started | - |
 | 3. Trust, Backup & Recovery | 0/TBD | Not started | - |
 | 4. OCR Lens Module | 0/TBD | Not started | - |
