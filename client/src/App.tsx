@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getStatus, type VaultStatus } from "./lib/api";
 import { installSessionSignals } from "./lib/session-signals";
 import InitScreen from "./features/vault-unlock/InitScreen";
@@ -31,8 +31,11 @@ export default function App() {
   // Tracks whether the vault was seen unlocked at some point, so a poll
   // that flips unlocked -> locked can route to LockedNotice instead of
   // silently reusing UnlockScreen (the user should understand what
-  // happened, not just see a blank re-prompt).
-  const wasUnlockedRef = useRef(false);
+  // happened, not just see a blank re-prompt). Deliberately state, not a
+  // ref (WR-01): "Unlock again" needs to schedule a re-render the moment
+  // it fires, not wait for the next unrelated poll/visibility event to
+  // happen to re-render this component.
+  const [wasUnlocked, setWasUnlocked] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,8 +73,12 @@ export default function App() {
     };
   }, []);
 
-  if (status?.unlocked) {
-    wasUnlockedRef.current = true;
+  // A guarded render-phase state update: only calls the setter on the
+  // transition into "seen unlocked", so this does not loop — once
+  // `wasUnlocked` is true, the condition is false on every subsequent
+  // render until `onReturnToUnlock` resets it.
+  if (status?.unlocked && !wasUnlocked) {
+    setWasUnlocked(true);
   }
 
   if (error) {
@@ -124,15 +131,11 @@ export default function App() {
     );
   }
 
-  if (wasUnlockedRef.current) {
+  if (wasUnlocked) {
     return (
       <main>
         <h1>Personal Assistant — Vault</h1>
-        <LockedNotice
-          onReturnToUnlock={() => {
-            wasUnlockedRef.current = false;
-          }}
-        />
+        <LockedNotice onReturnToUnlock={() => setWasUnlocked(false)} />
       </main>
     );
   }
