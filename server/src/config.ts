@@ -15,6 +15,19 @@ export const HOST = "127.0.0.1";
 export const PORT = 5174;
 
 /**
+ * The only Origin a browser-sent state-changing request may legitimately
+ * carry (WR-04) — the Vite dev server (`client/vite.config.ts`) that proxies
+ * `/api` to this server, same-origin from the browser's perspective. The
+ * loopback bind (D-02) stops other *machines* from reaching this API but
+ * does nothing to stop a malicious page open in another tab of the same
+ * browser from POSTing here directly; rejecting any request whose `Origin`
+ * header is present and does not match this value closes that gap without
+ * affecting non-browser clients (curl, tests), which never send an `Origin`
+ * header at all.
+ */
+export const ALLOWED_ORIGIN = `http://127.0.0.1:5173`;
+
+/**
  * Root directory for the vault's on-disk files. Overridable via the
  * `VAULT_DIR` environment variable so tests can point it at a throwaway
  * temp directory instead of the real `.vault/` under the repo root.

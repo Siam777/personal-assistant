@@ -3,19 +3,22 @@ import type { Server } from "node:net";
 import { pathToFileURL } from "node:url";
 import * as config from "./config.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { requireSameOriginForMutations } from "./middleware/sameOrigin.js";
 import { logError, logInfo } from "./log.js";
 import { vaultRouter } from "./modules/auth/routes.js";
 
 /**
- * Configured Express app: a small-size-limited JSON body parser, routes
- * mounted under `/api`, and `errorHandler` registered last. No route here
- * ever writes to standard output directly — anything worth reporting goes
+ * Configured Express app: a small-size-limited JSON body parser, a
+ * same-origin gate on every state-changing request (WR-04), routes mounted
+ * under `/api`, and `errorHandler` registered last. No route here ever
+ * writes to standard output directly — anything worth reporting goes
  * through `log.ts`.
  */
 export function createApp(): Express {
   const app = express();
 
   app.use(express.json({ limit: "100kb" }));
+  app.use(requireSameOriginForMutations);
 
   app.use("/api/vault", vaultRouter);
 
