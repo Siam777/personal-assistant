@@ -1,9 +1,12 @@
 /**
  * Calls the enroll endpoint, renders the returned QR code and base32
- * secret, and collects the confirmation code from the authenticator app.
- * Two-factor authentication is not on yet — scanning the code alone
- * changes nothing (T-04-08); it only turns on once the confirmation code
- * below is accepted. On success, hands the returned backup codes to
+ * secret, and collects the confirmation code from the authenticator app
+ * plus a re-entered master password (CR-01). Two-factor authentication is
+ * not on yet — scanning the code alone changes nothing (T-04-08); it only
+ * turns on once the confirmation code and master password below are both
+ * accepted. Requiring the password here (mirroring `DisableWithReauthScreen`)
+ * means a code guess alone can never attach a second factor of an
+ * attacker's choosing. On success, hands the returned backup codes to
  * `BackupCodesPanel`; this screen only reports completion to its parent
  * after those codes have been acknowledged.
  */
@@ -26,6 +29,7 @@ export default function EnrollScreen({ onEnrolled, onCancel }: EnrollScreenProps
   const [enrollment, setEnrollment] = useState<EnrollmentStart | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  const [masterPassword, setMasterPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
@@ -62,17 +66,25 @@ export default function EnrollScreen({ onEnrolled, onCancel }: EnrollScreenProps
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!enrollment || code.length === 0 || submitting) return;
+    if (!enrollment || code.length === 0 || masterPassword.length === 0 || submitting) {
+      return;
+    }
 
     setSubmitting(true);
     setServerMessage(null);
 
     try {
-      const result = await confirmTwoFactorEnrollment(enrollment.enrollmentId, code);
+      const result = await confirmTwoFactorEnrollment(
+        enrollment.enrollmentId,
+        code,
+        masterPassword
+      );
       setCode("");
+      setMasterPassword("");
       setBackupCodes(result.backupCodes);
     } catch (err) {
       setCode("");
+      setMasterPassword("");
       setServerMessage(
         err instanceof ApiError ? err.message : "Failed to confirm enrollment"
       );
@@ -102,7 +114,7 @@ export default function EnrollScreen({ onEnrolled, onCancel }: EnrollScreenProps
       <p>
         Two-factor authentication is <strong>not on yet</strong>. Scanning this code
         alone changes nothing — it only turns on once you confirm it below with a code
-        from your authenticator app.
+        from your authenticator app and your master password.
       </p>
       <img
         src={enrollment.qrDataUrl}
@@ -129,9 +141,24 @@ export default function EnrollScreen({ onEnrolled, onCancel }: EnrollScreenProps
           />
         </div>
 
+        <div>
+          <label htmlFor="twofa-confirm-password">Master password</label>
+          <br />
+          <input
+            id="twofa-confirm-password"
+            type="password"
+            autoComplete="current-password"
+            value={masterPassword}
+            onChange={(event) => setMasterPassword(event.target.value)}
+          />
+        </div>
+
         {serverMessage && <p role="alert">{serverMessage}</p>}
 
-        <button type="submit" disabled={code.length === 0 || submitting}>
+        <button
+          type="submit"
+          disabled={code.length === 0 || masterPassword.length === 0 || submitting}
+        >
           {submitting ? "Confirming…" : "Confirm and turn on"}
         </button>
         <button type="button" onClick={onCancel} disabled={submitting}>

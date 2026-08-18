@@ -96,12 +96,13 @@ function postEnroll(baseUrl: string): Promise<Response> {
 function postConfirm(
   baseUrl: string,
   enrollmentId: string,
-  code: string
+  code: string,
+  masterPassword: string
 ): Promise<Response> {
   return fetch(`${baseUrl}/api/vault/2fa/confirm`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ enrollmentId, code }),
+    body: JSON.stringify({ enrollmentId, code, masterPassword }),
   });
 }
 
@@ -143,7 +144,12 @@ async function setupEnrolledLockedVault(): Promise<EnrolledVault> {
   };
 
   const code = await generate({ secret: enrollment.secret });
-  const confirmRes = await postConfirm(harness.baseUrl, enrollment.enrollmentId, code);
+  const confirmRes = await postConfirm(
+    harness.baseUrl,
+    enrollment.enrollmentId,
+    code,
+    STRONG_PASSWORD
+  );
   expect(confirmRes.status).toBe(200);
   const confirmBody = (await confirmRes.json()) as { backupCodes: string[] };
 
@@ -163,6 +169,52 @@ describe("two-factor unlock", () => {
     }
     delete process.env.VAULT_DIR;
   });
+
+  it(
+    "confirming enrollment with an incorrect master password fails, even with a genuinely valid code, and 2FA is never enabled (CR-01)",
+    async () => {
+      harness = await startFreshApp();
+
+      const initRes = await postInit(harness.baseUrl, STRONG_PASSWORD);
+      expect(initRes.status).toBe(201);
+
+      const enrollRes = await postEnroll(harness.baseUrl);
+      expect(enrollRes.status).toBe(200);
+      const enrollment = (await enrollRes.json()) as {
+        enrollmentId: string;
+        secret: string;
+      };
+
+      const code = await generate({ secret: enrollment.secret });
+      const confirmRes = await postConfirm(
+        harness.baseUrl,
+        enrollment.enrollmentId,
+        code,
+        WRONG_PASSWORD
+      );
+      expect(confirmRes.status).toBe(401);
+      const confirmBody: unknown = await confirmRes.json();
+      expect(confirmBody).toEqual({ error: "Unable to unlock" });
+
+      const status = (await (await getStatus(harness.baseUrl)).json()) as {
+        totpEnabled: boolean;
+      };
+      expect(status.totpEnabled).toBe(false);
+
+      // The pending enrollment is left intact by a wrong-password attempt
+      // (only a wrong/expired enrollment id or an already-committed
+      // enrollment consumes it), so the same code with the correct password
+      // still confirms successfully afterward.
+      const retryRes = await postConfirm(
+        harness.baseUrl,
+        enrollment.enrollmentId,
+        code,
+        STRONG_PASSWORD
+      );
+      expect(retryRes.status).toBe(200);
+    },
+    20000
+  );
 
   it(
     "the correct master password with a valid current code unlocks the vault",

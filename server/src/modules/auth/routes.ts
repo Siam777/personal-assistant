@@ -14,7 +14,7 @@ import * as zxcvbnCommonPackage from "@zxcvbn-ts/language-common";
 import * as zxcvbnEnPackage from "@zxcvbn-ts/language-en";
 import * as config from "../../config.js";
 import { vaultAuthError } from "../../middleware/errorHandler.js";
-import { unlockRateLimit } from "../../middleware/rateLimit.js";
+import { twoFactorConfirmRateLimit, unlockRateLimit } from "../../middleware/rateLimit.js";
 import { requireUnlocked } from "../../middleware/requireUnlocked.js";
 import { validate } from "../../middleware/validate.js";
 import type { VaultMeta, VaultStatus } from "../../types.js";
@@ -340,26 +340,42 @@ vaultRouter.post("/2fa/enroll", requireUnlocked, (_req, res, next) => {
 const confirmEnrollmentBodySchema = z.object({
   enrollmentId: z.string(),
   code: z.string(),
+  masterPassword: z.string(),
 });
 
+/**
+ * Requires an unlocked session AND a freshly re-submitted master password
+ * (CR-01) — mirrors the `disable`/`regenerate` re-auth requirement rather
+ * than relying on session state alone. Without this, anyone able to reach
+ * the loopback API while the vault happens to be unlocked could enroll and
+ * brute-force a second factor of their own choosing without ever knowing
+ * the password; requiring the password here closes that off, and
+ * `twoFactorConfirmRateLimit` throttles the remaining (now much less
+ * useful) guessing surface the same way `unlockRateLimit` does for
+ * `/unlock`. Every failure — bad password, bad code, unknown/expired
+ * enrollment id — collapses to the same generic `vaultAuthError()`, so a
+ * response never reveals which check failed.
+ */
 vaultRouter.post(
   "/2fa/confirm",
   requireUnlocked,
+  twoFactorConfirmRateLimit,
   validate(confirmEnrollmentBodySchema),
   (req, res, next) => {
     void (async () => {
-      const { enrollmentId, code } = req.body as z.infer<
+      const { enrollmentId, code, masterPassword } = req.body as z.infer<
         typeof confirmEnrollmentBodySchema
       >;
       try {
+        await reauthenticateWithMasterPassword(masterPassword);
         const result = await confirmEnrollment(enrollmentId, code);
         if (!result) {
           next(vaultAuthError());
           return;
         }
         res.status(200).json(result);
-      } catch (err) {
-        next(err);
+      } catch {
+        next(vaultAuthError());
       }
     })();
   }

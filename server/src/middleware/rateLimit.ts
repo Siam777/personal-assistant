@@ -28,3 +28,23 @@ export const unlockRateLimit = rateLimit({
     next(vaultAuthError());
   },
 });
+
+/**
+ * Same policy as `unlockRateLimit`, mounted on `POST /api/vault/2fa/confirm`
+ * (CR-01). Without this, confirmation is a cheap, sub-millisecond otplib
+ * check with no Argon2id cost gating it, unlike every other auth-tag/password
+ * check in this module — a 6-digit code is a 10^6 search space that is
+ * brute-forceable well within `PENDING_ENROLLMENT_TTL_MS` at loopback speed.
+ * Reuses the same `vaultAuthError()` forwarding for the same reason
+ * `unlockRateLimit` does: a rate-limited response must stay indistinguishable
+ * from a wrong-code/wrong-password response.
+ */
+export const twoFactorConfirmRateLimit = rateLimit({
+  windowMs: 60_000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, _res, next) => {
+    next(vaultAuthError());
+  },
+});

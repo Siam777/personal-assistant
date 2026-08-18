@@ -149,12 +149,25 @@ export function beginTwoFactorEnrollment(): Promise<EnrollmentStart> {
   return postJson<EnrollmentStart>("/api/vault/2fa/enroll", {});
 }
 
-/** Requires an unlocked session. On success, 2FA is now on and the returned codes are the only time they are ever shown. */
+/**
+ * Requires an unlocked session AND the master password, re-verified
+ * server-side even though the vault is already unlocked (CR-01) — the same
+ * re-auth requirement `disableTwoFactor`/`regenerateBackupCodes` already
+ * carry, closing the gap where a successful code guess could otherwise
+ * attach an attacker-chosen second factor without ever proving the
+ * password. On success, 2FA is now on and the returned codes are the only
+ * time they are ever shown.
+ */
 export function confirmTwoFactorEnrollment(
   enrollmentId: string,
-  code: string
+  code: string,
+  masterPassword: string
 ): Promise<EnrollmentResult> {
-  return postJson<EnrollmentResult>("/api/vault/2fa/confirm", { enrollmentId, code });
+  return postJson<EnrollmentResult>("/api/vault/2fa/confirm", {
+    enrollmentId,
+    code,
+    masterPassword,
+  });
 }
 
 /**
