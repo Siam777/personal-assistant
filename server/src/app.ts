@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import * as config from "./config.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { logError, logInfo } from "./log.js";
-import type { VaultStatus } from "./types.js";
+import { vaultRouter } from "./modules/auth/routes.js";
 
 /**
  * Configured Express app: a small-size-limited JSON body parser, routes
@@ -17,17 +17,7 @@ export function createApp(): Express {
 
   app.use(express.json({ limit: "100kb" }));
 
-  // Placeholder route — Plan 01-02 replaces this with the real
-  // implementation in modules/auth/routes.ts.
-  app.get("/api/vault/status", (_req, res) => {
-    const status: VaultStatus = {
-      initialized: false,
-      unlocked: false,
-      totpEnabled: false,
-      idleTimeoutMs: config.IDLE_TIMEOUT_MS,
-    };
-    res.json(status);
-  });
+  app.use("/api/vault", vaultRouter);
 
   app.use(errorHandler);
 

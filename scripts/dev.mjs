@@ -15,10 +15,26 @@
 // Each child's output is prefixed with its name. A single Ctrl-C (SIGINT)
 // stops all three children with no orphaned process left behind.
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
 const isWindows = process.platform === "win32";
 const npmCmd = isWindows ? "npm.cmd" : "npm";
+
+// On a truly fresh checkout `server/dist/` does not exist yet. Spawning
+// `node --watch server/dist/src/app.js` and `tsc --watch` at the same time
+// races: node's initial load fails with MODULE_NOT_FOUND before tsc's first
+// compile lands, and that immediate exit is treated as fatal below, killing
+// every other child before the stack ever comes up. A one-shot synchronous
+// build here guarantees the entrypoint exists before `node --watch` starts.
+process.stdout.write("[build] compiling server once before starting watchers…\n");
+const initialBuild = spawnSync(npmCmd, ["exec", "--", "tsc", "-p", "server/tsconfig.json"], {
+  stdio: "inherit",
+  shell: isWindows,
+});
+if (initialBuild.status !== 0) {
+  process.stderr.write("[build] initial server compile failed — see output above\n");
+  process.exit(initialBuild.status ?? 1);
+}
 
 /** @type {{ name: string, cmd: string, args: string[] }[]} */
 const specs = [
