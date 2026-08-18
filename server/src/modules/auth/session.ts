@@ -67,7 +67,15 @@ export function lock(): void {
   vaultKey = null;
 
   if (db) {
-    void db.destroy();
+    // Fire-and-forget, but never unhandled (WR-03): every other call site
+    // that closes a Kysely handle wraps it in try/catch, and this is the
+    // one place with no external trigger to observe or retry a failure —
+    // an unhandled rejection here can crash the whole process under
+    // Node's default behavior, defeating the very auto-lock this function
+    // implements.
+    db.destroy().catch(() => {
+      // best-effort close; the vault is already considered locked either way
+    });
   }
   db = null;
 
