@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can enable optional TOTP-based 2FA, and once enabled must supply both the master password and a valid TOTP code to unlock.
   4. After a period of inactivity, the vault locks automatically and the in-memory session key is destroyed — decrypted data is inaccessible until the vault is unlocked again.
 
-**Plans**: 4/4 plans executed
+**Plans**: 5 plans (4/5 executed; 01-05 is gap closure for UAT gap G-01-31)
 
 Plans:
 **Wave 1**
@@ -51,6 +51,10 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 01-04-PLAN.md — Optional TOTP 2FA with single-use backup codes and re-authenticated disable
+
+**Wave 5** *(gap closure — UAT gap G-01-31)*
+
+- [ ] 01-05-PLAN.md — Clean Ctrl-C shutdown of the dev stack on Windows, with an automated reap harness
 
 ### Phase 2: Vault Core — Entries, Organization & Search
 
