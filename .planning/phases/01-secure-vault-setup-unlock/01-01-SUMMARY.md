@@ -251,6 +251,17 @@ None - no external service configuration required.
 - The calibrated `KDF_PARAMS` (474.04 ms median on this machine) is ready for Plan 01-02's `deriveMasterKey` to consume directly from `server/src/config.ts`
 - No blockers. One item for human follow-up: interactively confirm the `npm run dev` Ctrl-C shutdown path from a real terminal (see Issues Encountered / coverage `D6`) — the automated tree-kill equivalent is proven, but the literal console-signal path is not.
 
+## Self-Check: PASSED
+
+- FOUND: server/src/app.ts
+- FOUND: server/src/config.ts
+- FOUND: server/src/log.ts
+- FOUND: server/src/deps.test.ts
+- FOUND: client/src/App.tsx
+- FOUND: .planning/phases/01-secure-vault-setup-unlock/01-01-SUMMARY.md
+- FOUND commit: c062172 (feat scaffold)
+- FOUND commit: 5d8f799 (docs summary)
+
 ---
 *Phase: 01-secure-vault-setup-unlock*
 *Completed: 2026-08-18*
