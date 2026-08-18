@@ -81,11 +81,16 @@ export default function UnlockScreen({ totpEnabled, onUnlocked }: UnlockScreenPr
             <input
               id="unlock-totp-code"
               type="text"
-              inputMode="numeric"
+              inputMode="text"
               autoComplete="off"
+              size={12}
               value={totpCode}
               onChange={(event) => setTotpCode(event.target.value)}
             />
+            <p>
+              Enter the six-digit code from your authenticator app, or one of your
+              backup codes if you don&apos;t have access to it.
+            </p>
           </div>
         )}
 
