@@ -137,6 +137,7 @@ vaultRouter.post("/init", validate(initBodySchema), (req, res, next) => {
           memoryCost: config.KDF_PARAMS.memoryCost,
           timeCost: config.KDF_PARAMS.timeCost,
           parallelism: config.KDF_PARAMS.parallelism,
+          hashLength: config.KDF_PARAMS.hashLength,
           saltB64: salt.toString("base64"),
         },
         wrappedVaultKey,
@@ -233,6 +234,7 @@ vaultRouter.post(
           memoryCost: meta.kdf.memoryCost,
           timeCost: meta.kdf.timeCost,
           parallelism: meta.kdf.parallelism,
+          hashLength: meta.kdf.hashLength,
         });
 
         // unwrapKey throws on an auth-tag mismatch — that throw IS the
@@ -314,6 +316,7 @@ async function reauthenticateWithMasterPassword(masterPassword: string): Promise
     memoryCost: meta.kdf.memoryCost,
     timeCost: meta.kdf.timeCost,
     parallelism: meta.kdf.parallelism,
+    hashLength: meta.kdf.hashLength,
   });
   try {
     unwrapKey(meta.wrappedVaultKey, masterKey);

@@ -20,6 +20,11 @@ export interface VaultMeta {
     memoryCost: number;
     timeCost: number;
     parallelism: number;
+    // Recorded per-vault (WR-02) so a future change to
+    // `config.KDF_PARAMS.hashLength` cannot silently re-derive every
+    // existing vault's Master Key at a different length and turn every
+    // unlock attempt into an indistinguishable "wrong password" failure.
+    hashLength: number;
     saltB64: string; // >=16 random bytes, base64 — NOT secret
   };
   wrappedVaultKey: WrappedBlob;

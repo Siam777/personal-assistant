@@ -39,6 +39,11 @@ const vaultMetaSchema = z.object({
     memoryCost: z.number(),
     timeCost: z.number(),
     parallelism: z.number(),
+    // WR-02: must be validated (not silently stripped by zod's default
+    // unknown-key behavior) — omitting it here would make readVaultMeta()
+    // return `hashLength: undefined` for every vault, defeating the whole
+    // point of persisting it.
+    hashLength: z.number(),
     saltB64: z.string(),
   }),
   wrappedVaultKey: wrappedBlobSchema,

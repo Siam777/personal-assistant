@@ -19,21 +19,31 @@ import type { WrappedBlob } from "../../types.js";
 /** Standard AES-256-GCM nonce size. */
 const IV_LENGTH_BYTES = 12;
 
-/** The subset of Argon2id cost parameters that vary per vault and are recorded in `vault.meta.json`. */
+/**
+ * The subset of Argon2id cost parameters that vary per vault and are
+ * recorded in `vault.meta.json`. `hashLength` is included (WR-02) so a
+ * future change to `config.KDF_PARAMS.hashLength` cannot silently re-derive
+ * an existing vault's Master Key at the wrong length — every field that
+ * affects the derived key's bytes must be threaded from the sidecar, not
+ * read live from `config.KDF_PARAMS`, on every path except first-time vault
+ * creation.
+ */
 export interface KdfCostParams {
   memoryCost: number;
   timeCost: number;
   parallelism: number;
+  hashLength: number;
 }
 
 /**
- * Derives a 32-byte Master Key from the master password and a per-vault
- * salt via Argon2id. Defaults to `config.KDF_PARAMS` for vault creation, but
- * accepts an explicit cost-parameter override so the unlock path can derive
+ * Derives a Master Key from the master password and a per-vault salt via
+ * Argon2id. Defaults to `config.KDF_PARAMS` for vault creation, but accepts
+ * an explicit cost-parameter override so the unlock/reauth paths can derive
  * using whatever parameters were actually recorded in that vault's sidecar
  * at creation time — a vault created under older or different calibrated
- * parameters must still open even after `config.KDF_PARAMS` changes.
- * Deterministic for a fixed (password, salt, params) triple.
+ * parameters (including a different `hashLength`) must still open even
+ * after `config.KDF_PARAMS` changes. Deterministic for a fixed (password,
+ * salt, params) triple.
  */
 export async function deriveMasterKey(
   password: string,
@@ -42,7 +52,6 @@ export async function deriveMasterKey(
 ): Promise<Buffer> {
   return argon2.hash(password, {
     type: config.KDF_PARAMS.type,
-    hashLength: config.KDF_PARAMS.hashLength,
     ...kdfCostParams,
     salt,
     raw: true,
