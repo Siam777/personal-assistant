@@ -98,3 +98,28 @@ export async function initVault(
 
   return (await res.json()) as VaultStatus;
 }
+
+/**
+ * Submits the master password (and, once Plan 01-04 enables it, a TOTP
+ * code) in one request. On a non-2xx response, `ApiError.message` carries
+ * exactly the server's generic failure text and nothing more — callers must
+ * not attempt to interpret or re-word it (see `<assumption_delta_decision>`
+ * in 01-03-PLAN.md for why the request already carries an optional
+ * `totpCode`).
+ */
+export async function unlockVault(
+  masterPassword: string,
+  totpCode?: string
+): Promise<VaultStatus> {
+  return postJson<VaultStatus>("/api/vault/unlock", { masterPassword, totpCode });
+}
+
+/**
+ * Fire-and-forget lock request. Safe to call whether or not a session is
+ * currently live — the server's `POST /lock` is idempotent. `keepalive`
+ * lets this survive a page that is closing or backgrounding, which is the
+ * whole reason `session-signals.ts` calls this rather than `postJson`.
+ */
+export function lockVault(): Promise<Response> {
+  return fetch("/api/vault/lock", { method: "POST", keepalive: true });
+}

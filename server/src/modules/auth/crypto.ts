@@ -19,16 +19,34 @@ import type { WrappedBlob } from "../../types.js";
 /** Standard AES-256-GCM nonce size. */
 const IV_LENGTH_BYTES = 12;
 
+/** The subset of Argon2id cost parameters that vary per vault and are recorded in `vault.meta.json`. */
+export interface KdfCostParams {
+  memoryCost: number;
+  timeCost: number;
+  parallelism: number;
+}
+
 /**
  * Derives a 32-byte Master Key from the master password and a per-vault
- * salt via Argon2id, using the calibrated cost parameters from
- * `config.KDF_PARAMS`. Deterministic for a fixed (password, salt) pair.
+ * salt via Argon2id. Defaults to `config.KDF_PARAMS` for vault creation, but
+ * accepts an explicit cost-parameter override so the unlock path can derive
+ * using whatever parameters were actually recorded in that vault's sidecar
+ * at creation time — a vault created under older or different calibrated
+ * parameters must still open even after `config.KDF_PARAMS` changes.
+ * Deterministic for a fixed (password, salt, params) triple.
  */
 export async function deriveMasterKey(
   password: string,
-  salt: Buffer
+  salt: Buffer,
+  kdfCostParams: KdfCostParams = config.KDF_PARAMS
 ): Promise<Buffer> {
-  return argon2.hash(password, { ...config.KDF_PARAMS, salt, raw: true });
+  return argon2.hash(password, {
+    type: config.KDF_PARAMS.type,
+    hashLength: config.KDF_PARAMS.hashLength,
+    ...kdfCostParams,
+    salt,
+    raw: true,
+  });
 }
 
 /**

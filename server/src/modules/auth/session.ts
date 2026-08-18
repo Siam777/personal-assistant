@@ -13,6 +13,11 @@ let vaultKey: Buffer | null = null;
 let db: Kysely<VaultDbSchema> | null = null;
 let idleTimer: NodeJS.Timeout | null = null;
 
+// Captured by lock() purely so the test-only observability accessor below
+// can report "was this buffer actually zeroed" without ever exposing key
+// bytes to a caller. Not read anywhere else in this module.
+let lastLockedBufferRef: Buffer | null = null;
+
 export function isUnlocked(): boolean {
   return vaultKey !== null;
 }
@@ -56,6 +61,7 @@ export function armIdleTimer(): void {
  */
 export function lock(): void {
   if (vaultKey) {
+    lastLockedBufferRef = vaultKey;
     vaultKey.fill(0);
   }
   vaultKey = null;
@@ -69,4 +75,28 @@ export function lock(): void {
     clearTimeout(idleTimer);
   }
   idleTimer = null;
+}
+
+/**
+ * Test-only observability. "The key was zeroed" is otherwise unobservable
+ * from outside this module — an unobservable security property is one that
+ * silently regresses — so this reports a boolean summary only, never the
+ * buffer itself or any of its bytes. Inert (returns `null`) unless running
+ * under Vitest, so this accessor cannot become a runtime side-channel in a
+ * shipped build.
+ */
+export function __unsafeTestOnlyObserveSession(): {
+  hasKeyMaterial: boolean;
+  lastLockedBufferIsAllZero: boolean | null;
+} | null {
+  if (process.env.VITEST !== "true") {
+    return null;
+  }
+  return {
+    hasKeyMaterial: vaultKey !== null,
+    lastLockedBufferIsAllZero:
+      lastLockedBufferRef === null
+        ? null
+        : lastLockedBufferRef.every((byte) => byte === 0),
+  };
 }
