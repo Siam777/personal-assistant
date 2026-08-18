@@ -190,11 +190,17 @@ export async function confirmEnrollment(
  * be checked at all without the password already having unlocked the Vault
  * Key it is decrypted with. Checks the live TOTP code first, reading
  * `.valid` explicitly; on a miss, hashes the supplied value and compares it
- * against `backupCodeHashes` with a length-safe constant-time comparison.
- * A matched backup code is removed from the array and the sidecar is
- * rewritten atomically before this function returns, so a replay of the
- * same code cannot succeed twice — even within the same second. Returns a
- * plain boolean and never reveals which path (or neither) matched.
+ * against a freshly re-read sidecar's `backupCodeHashes` with a length-safe
+ * constant-time comparison (WR-06: `meta` is a snapshot the caller read
+ * before an ~474ms Argon2id derivation and the live-code check above — both
+ * real await points a concurrent backup-code consumption or regeneration
+ * can run inside — so the match-and-write step below re-reads instead of
+ * trusting that snapshot, closing the window where a stale write would
+ * silently lose a concurrent change via last-write-wins). A matched backup
+ * code is removed from the array and the sidecar is rewritten atomically
+ * before this function returns, so a replay of the same code cannot
+ * succeed twice — even within the same second. Returns a plain boolean and
+ * never reveals which path (or neither) matched.
  */
 export async function verifySecondFactor(
   code: string,
@@ -235,7 +241,14 @@ export async function verifySecondFactor(
   }
 
   const candidateHash = Buffer.from(hashBackupCode(code), "hex");
-  const matchIndex = meta.totp.backupCodeHashes.findIndex((storedHex) => {
+
+  // Re-read immediately before matching/writing rather than trusting the
+  // caller's `meta` snapshot (WR-06). `readVaultMeta`/`writeVaultMetaAtomic`
+  // are both synchronous — nothing else can run on Node's single-threaded
+  // event loop between these two statements, so this closes the TOCTOU
+  // window without needing a separate lock/queue.
+  const freshMeta = readVaultMeta();
+  const matchIndex = freshMeta.totp.backupCodeHashes.findIndex((storedHex) => {
     const stored = Buffer.from(storedHex, "hex");
     return stored.length === candidateHash.length && timingSafeEqual(stored, candidateHash);
   });
@@ -244,10 +257,12 @@ export async function verifySecondFactor(
     return false;
   }
 
-  const remainingHashes = meta.totp.backupCodeHashes.filter((_, index) => index !== matchIndex);
+  const remainingHashes = freshMeta.totp.backupCodeHashes.filter(
+    (_, index) => index !== matchIndex
+  );
   writeVaultMetaAtomic({
-    ...meta,
-    totp: { ...meta.totp, backupCodeHashes: remainingHashes },
+    ...freshMeta,
+    totp: { ...freshMeta.totp, backupCodeHashes: remainingHashes },
   });
 
   return true;

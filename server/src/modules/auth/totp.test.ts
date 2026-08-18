@@ -182,6 +182,51 @@ describe("totp.ts", () => {
   );
 
   it(
+    "verifySecondFactor re-reads the sidecar rather than the caller's stale meta snapshot, so a concurrent regeneration is never silently reverted (WR-06)",
+    async () => {
+      harness = await startUnlockedVault();
+
+      const enrollment = await harness.totp.beginEnrollment();
+      const code = await generate({ secret: enrollment.secret });
+      const enrollResult = await harness.totp.confirmEnrollment(enrollment.enrollmentId, code);
+      expect(enrollResult).not.toBeNull();
+
+      const vaultKey = harness.session.getVaultKey();
+
+      // Snapshot `meta` the way the /unlock handler does: read once, before
+      // whatever real await gap (Argon2id derivation, the live-code check)
+      // separates that read from the eventual match-and-write below.
+      const staleMeta = harness.vaultMeta.readVaultMeta();
+
+      // Simulate a concurrent request regenerating backup codes during that
+      // gap — replaces the whole set with ten brand-new hashes.
+      const { hashes: regeneratedHashes } = harness.totp.generateBackupCodes();
+      const metaBeforeRegenerate = harness.vaultMeta.readVaultMeta();
+      harness.vaultMeta.writeVaultMetaAtomic({
+        ...metaBeforeRegenerate,
+        totp: { ...metaBeforeRegenerate.totp, backupCodeHashes: regeneratedHashes },
+      });
+
+      // A code from the now-superseded (pre-regeneration) set must no
+      // longer verify — if this used the stale `meta` argument to build its
+      // write, it would find a match against the old hashes, "succeed", and
+      // overwrite the sidecar with (old hashes minus one), silently
+      // discarding the concurrent regeneration entirely.
+      const staleBackupCode = enrollResult?.backupCodes[0] as string;
+      const staleResult = await harness.totp.verifySecondFactor(
+        staleBackupCode,
+        vaultKey,
+        staleMeta
+      );
+      expect(staleResult).toBe(false);
+
+      const metaAfter = harness.vaultMeta.readVaultMeta();
+      expect(metaAfter.totp.backupCodeHashes).toEqual(regeneratedHashes);
+    },
+    20000
+  );
+
+  it(
     "the sidecar's raw bytes never contain the base32 secret, in text or base64 form, after a confirmed enrollment",
     async () => {
       harness = await startUnlockedVault();
