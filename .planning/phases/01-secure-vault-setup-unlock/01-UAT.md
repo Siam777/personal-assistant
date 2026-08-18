@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-secure-vault-setup-unlock
 source: [01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md]
 started: 2026-08-18T15:51:06Z
-updated: 2026-08-19T00:16:00Z
+updated: 2026-08-19T00:32:00Z
 ---
 
 ## Current Test
@@ -238,10 +238,17 @@ skipped: 0
   reason: "User reported: 'Terminate batch job (Y/N)?' prompt appeared on Ctrl-C, the y keystroke was not consumed by it, and two node.exe processes (PIDs 5280, 36264) remained running afterward per Get-Process"
   severity: major
   test: 31
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Two compounding Windows console-group Ctrl-C causes. (1) Windows delivers CTRL_C_EVENT as a broadcast to every process attached to the same console simultaneously (Node docs: without CREATE_NEW_PROCESS_GROUP, Ctrl+C reaches 'all processes in the current console group ... parents that may not gracefully handle the interrupt'). `npm run dev` puts npm.cmd (a batch file) as the literal top-level console-attached process, outside dev.mjs's SIGINT handler and taskkill mitigation entirely -- that outer cmd.exe layer is what shows 'Terminate batch job (Y/N)?'. (2) Even within dev.mjs's own subtree, killTree()'s taskkill calls are unawaited fire-and-forget spawns racing the ancestor cmd.exe teardown, and `node --watch server/dist/src/app.js` spawns its own untracked grandchild node.exe (confirmed via nodejs/node#59380) that dev.mjs never records in children[], explaining surviving node.exe PIDs."
+  artifacts:
+    - path: "scripts/dev.mjs"
+      issue: "Children (including the non-shell `node --watch` spec) are spawned without detached/CREATE_NEW_PROCESS_GROUP, leaving them in the same console group as the outer npm.cmd/PowerShell; killTree()'s taskkill spawns are fire-and-forget, not awaited before considering shutdown complete."
+    - path: "package.json"
+      issue: "\"dev\": \"node scripts/dev.mjs\" invoked via `npm run dev` puts npm.cmd (a batch file) as the literal top-level console-attached process -- a layer dev.mjs cannot reach or coordinate with."
+  missing:
+    - "Spawn dev.mjs's three children (and the initial spawnSync build) in a new process group on Windows so they don't receive the raw console Ctrl-C broadcast directly, and await taskkill's exit before considering shutdown complete."
+    - "Avoid the npm.cmd batch-file hop for tsc/vite children where possible (invoke their .js entrypoints via node directly) to eliminate nested cmd.exe 'Terminate batch job' interception points inside dev.mjs's own subtree."
+    - "Document/consider `node scripts/dev.mjs` as the recommended direct invocation instead of `npm run dev`, since the outer npm.cmd layer is outside the script's control entirely."
+  debug_session: ".planning/debug/npm-dev-ctrlc-orphan-processes.md"
 
 - gap_id: G-01-1
   truth: "Kill any running server/service, clear ephemeral state, start from scratch, server boots without errors, primary query returns live data"
