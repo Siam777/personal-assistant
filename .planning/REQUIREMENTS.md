@@ -9,11 +9,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Security & Unlock
 
-- [ ] **SEC-01**: User can set a master password that derives the vault's encryption key (Argon2id KDF + AES-256-GCM envelope encryption)
+- [x] **SEC-01**: User can set a master password that derives the vault's encryption key (Argon2id KDF + AES-256-GCM envelope encryption)
 - [ ] **SEC-02**: User can unlock the vault by entering the correct master password
 - [ ] **SEC-03**: User can enable optional TOTP-based 2FA on top of the master password
 - [ ] **SEC-04**: Vault automatically locks after a period of inactivity, destroying the in-memory session key (not just hiding the UI)
-- [ ] **SEC-05**: No plaintext secret, derived key, or master password is ever written to disk, logs, or localStorage/sessionStorage
+- [x] **SEC-05**: No plaintext secret, derived key, or master password is ever written to disk, logs, or localStorage/sessionStorage
 
 ### Vault Entries
 
@@ -87,11 +87,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | Phase 1 | Pending |
+| SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Pending |
 | SEC-03 | Phase 1 | Pending |
 | SEC-04 | Phase 1 | Pending |
-| SEC-05 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Complete |
 | VAULT-01 | Phase 2 | Pending |
 | VAULT-02 | Phase 2 | Pending |
 | VAULT-03 | Phase 2 | Pending |
@@ -111,6 +111,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OCR-04 | Phase 4 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 22 total
 - Mapped to phases: 22/22 ✓
 - Unmapped: 0
