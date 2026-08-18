@@ -32,6 +32,19 @@ describe("log redaction", () => {
     expect(loggedFields.payload).toBe("[REDACTED]");
   });
 
+  it(
+    "redacts a qrDataUrl-shaped field even though its name matches none of the original terms (WR-07)",
+    () => {
+      const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+      logInfo("enrollment started", {
+        qrDataUrl: "data:image/png;base64,not-a-real-secret-payload",
+      });
+
+      const loggedFields = spy.mock.calls[0]?.[1] as { qrDataUrl: string };
+      expect(loggedFields.qrDataUrl).toBe("[REDACTED]");
+    }
+  );
+
   it("leaves unrelated fields intact", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
     logInfo("status check", { userId: 42, route: "/api/vault/status" });

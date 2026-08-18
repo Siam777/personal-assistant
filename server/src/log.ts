@@ -12,8 +12,15 @@
 
 const REDACTED = "[REDACTED]";
 
+// WR-07: `uri`/`url`/`qr`/`blob`/`data` are included alongside the original
+// terms specifically because `EnrollmentStart.qrDataUrl` (a base64 PNG data
+// URL encoding the full `otpauth://` URI, including the TOTP secret) does
+// not match any of the original terms and would not have been redacted if
+// ever logged. Widening the blocklist accepts more over-redaction as the
+// deliberate tradeoff — this stays a blocklist, not a mechanical guarantee,
+// but a broader one is strictly safer than the narrower list it replaces.
 const SECRET_KEY_PATTERN =
-  /password|secret|key|token|code|salt|iv|authtag|cipher(text)?/i;
+  /password|secret|key|token|code|salt|iv|authtag|cipher(text)?|uri|url|qr|blob|data/i;
 
 export type LogFields = Record<string, unknown>;
 
