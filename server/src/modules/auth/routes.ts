@@ -15,12 +15,20 @@ import * as zxcvbnEnPackage from "@zxcvbn-ts/language-en";
 import * as config from "../../config.js";
 import { vaultAuthError } from "../../middleware/errorHandler.js";
 import { unlockRateLimit } from "../../middleware/rateLimit.js";
+import { requireUnlocked } from "../../middleware/requireUnlocked.js";
 import { validate } from "../../middleware/validate.js";
 import type { VaultMeta, VaultStatus } from "../../types.js";
 import type { VaultDbSchema } from "../db/schema.js";
 import { initSchema, openVaultDb } from "../db/connection.js";
 import { deriveMasterKey, generateVaultKey, unwrapKey, wrapKey } from "./crypto.js";
 import * as session from "./session.js";
+import {
+  beginEnrollment,
+  confirmEnrollment,
+  disableTotp,
+  generateBackupCodes,
+  verifySecondFactor,
+} from "./totp.js";
 import {
   ensureVaultDir,
   readVaultMeta,
@@ -188,7 +196,7 @@ vaultRouter.post(
   validate(unlockBodySchema),
   (req, res, next) => {
     void (async () => {
-      const { masterPassword } = req.body as z.infer<typeof unlockBodySchema>;
+      const { masterPassword, totpCode } = req.body as z.infer<typeof unlockBodySchema>;
 
       // A state fact the client already learns from GET /status, not a
       // secret — the vault-does-or-doesn't-exist distinction is not part
@@ -233,11 +241,18 @@ vaultRouter.post(
         const vaultKey = unwrapKey(meta.wrappedVaultKey, masterKey);
         db = openVaultDb(config.VAULT_DB_PATH, vaultKey);
 
+        // The master password is proven above by the auth-tag check inside
+        // unwrapKey; the second factor is examined only after that
+        // succeeds. This ordering is load-bearing, not a stylistic choice:
+        // verifySecondFactor is handed the already-recovered Vault Key
+        // rather than deriving one itself, so a code alone can never
+        // unlock anything — without the correct password there is no
+        // Vault Key with which to decrypt the secret the code is checked
+        // against (this plan's `must_haves.prohibitions`).
         if (meta.totp.enabled) {
-          // No second-factor verifier exists yet — Plan 01-04 supplies
-          // one. Fail closed rather than unlock a vault whose second
-          // factor cannot currently be checked.
-          throw vaultAuthError();
+          if (!totpCode || !(await verifySecondFactor(totpCode, vaultKey, meta))) {
+            throw vaultAuthError();
+          }
         }
 
         session.unlockSession(vaultKey, db);
@@ -284,3 +299,124 @@ vaultRouter.post("/lock", (_req, res) => {
   session.lock();
   res.status(204).end();
 });
+
+/**
+ * Re-derives the Master Key from the submitted password against the
+ * sidecar's own recorded salt/KDF params and re-unwraps the stored Vault
+ * Key to prove it — the same derive-then-unwrap pattern `POST /unlock`
+ * uses, reused here rather than duplicated with different semantics.
+ * Throws on any failure; never distinguishes the cause.
+ */
+async function reauthenticateWithMasterPassword(masterPassword: string): Promise<void> {
+  const meta = readVaultMeta();
+  const salt = Buffer.from(meta.kdf.saltB64, "base64");
+  const masterKey = await deriveMasterKey(masterPassword, salt, {
+    memoryCost: meta.kdf.memoryCost,
+    timeCost: meta.kdf.timeCost,
+    parallelism: meta.kdf.parallelism,
+  });
+  try {
+    unwrapKey(meta.wrappedVaultKey, masterKey);
+  } finally {
+    masterKey.fill(0);
+  }
+}
+
+/**
+ * Requires an unlocked session (D-06 reads first-time enrollment as needing
+ * only that, not a fresh password — see this plan's <flagged_assumptions>).
+ */
+vaultRouter.post("/2fa/enroll", requireUnlocked, (_req, res, next) => {
+  void (async () => {
+    try {
+      const enrollment = await beginEnrollment();
+      res.status(200).json(enrollment);
+    } catch (err) {
+      next(err);
+    }
+  })();
+});
+
+const confirmEnrollmentBodySchema = z.object({
+  enrollmentId: z.string(),
+  code: z.string(),
+});
+
+vaultRouter.post(
+  "/2fa/confirm",
+  requireUnlocked,
+  validate(confirmEnrollmentBodySchema),
+  (req, res, next) => {
+    void (async () => {
+      const { enrollmentId, code } = req.body as z.infer<
+        typeof confirmEnrollmentBodySchema
+      >;
+      try {
+        const result = await confirmEnrollment(enrollmentId, code);
+        if (!result) {
+          next(vaultAuthError());
+          return;
+        }
+        res.status(200).json(result);
+      } catch (err) {
+        next(err);
+      }
+    })();
+  }
+);
+
+const reauthBodySchema = z.object({
+  masterPassword: z.string(),
+});
+
+/**
+ * Requires an unlocked session AND a freshly re-submitted master password
+ * (D-06, T-04-05) — an already-unlocked session alone is deliberately not
+ * sufficient, which is precisely the walked-away-from-machine case this
+ * guards against.
+ */
+vaultRouter.post(
+  "/2fa/disable",
+  requireUnlocked,
+  validate(reauthBodySchema),
+  (req, res, next) => {
+    void (async () => {
+      const { masterPassword } = req.body as z.infer<typeof reauthBodySchema>;
+      try {
+        await reauthenticateWithMasterPassword(masterPassword);
+        disableTotp();
+        res.status(204).end();
+      } catch {
+        next(vaultAuthError());
+      }
+    })();
+  }
+);
+
+vaultRouter.post(
+  "/2fa/backup-codes/regenerate",
+  requireUnlocked,
+  validate(reauthBodySchema),
+  (req, res, next) => {
+    void (async () => {
+      const { masterPassword } = req.body as z.infer<typeof reauthBodySchema>;
+      try {
+        await reauthenticateWithMasterPassword(masterPassword);
+
+        const meta = readVaultMeta();
+        if (!meta.totp.enabled) {
+          next(vaultAuthError());
+          return;
+        }
+
+        const { codes, hashes } = generateBackupCodes();
+        meta.totp.backupCodeHashes = hashes;
+        writeVaultMetaAtomic(meta);
+
+        res.status(200).json({ backupCodes: codes });
+      } catch {
+        next(vaultAuthError());
+      }
+    })();
+  }
+);

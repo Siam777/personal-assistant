@@ -123,3 +123,60 @@ export async function unlockVault(
 export function lockVault(): Promise<Response> {
   return fetch("/api/vault/lock", { method: "POST", keepalive: true });
 }
+
+/**
+ * Returned by `POST /api/vault/2fa/enroll`. `secret` is the base32 TOTP
+ * secret in plaintext — the one place it ever reaches the browser, and only
+ * to the same local user who already holds an unlocked vault.
+ */
+export interface EnrollmentStart {
+  enrollmentId: string;
+  qrDataUrl: string;
+  secret: string;
+}
+
+/**
+ * Returned by `POST /api/vault/2fa/confirm` and by backup-code
+ * regeneration. These plaintext codes exist in exactly this one response —
+ * no endpoint ever returns them again.
+ */
+export interface EnrollmentResult {
+  backupCodes: string[];
+}
+
+/** Requires an unlocked session. Starts a new pending enrollment; nothing is committed until `confirmTwoFactorEnrollment` succeeds. */
+export function beginTwoFactorEnrollment(): Promise<EnrollmentStart> {
+  return postJson<EnrollmentStart>("/api/vault/2fa/enroll", {});
+}
+
+/** Requires an unlocked session. On success, 2FA is now on and the returned codes are the only time they are ever shown. */
+export function confirmTwoFactorEnrollment(
+  enrollmentId: string,
+  code: string
+): Promise<EnrollmentResult> {
+  return postJson<EnrollmentResult>("/api/vault/2fa/confirm", { enrollmentId, code });
+}
+
+/**
+ * Requires an unlocked session AND the master password, re-verified
+ * server-side even though the vault is already unlocked (D-06). The
+ * response body is empty on success (204), so this does not go through
+ * `postJson`, which always parses a JSON body.
+ */
+export async function disableTwoFactor(masterPassword: string): Promise<void> {
+  const res = await fetch("/api/vault/2fa/disable", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ masterPassword }),
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+}
+
+/** Requires an unlocked session AND the master password (D-06). Replaces the whole backup-code set, invalidating every previous code. */
+export function regenerateBackupCodes(masterPassword: string): Promise<EnrollmentResult> {
+  return postJson<EnrollmentResult>("/api/vault/2fa/backup-codes/regenerate", {
+    masterPassword,
+  });
+}
