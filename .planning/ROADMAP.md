@@ -70,7 +70,7 @@ Plans:
   4. User can organize entries into folders/categories and tag them, then filter the vault by tag.
   5. User can search across all vault entries by name or metadata and quickly find the entry they need.
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 **UI hint**: yes
 
 Plans:
@@ -88,7 +88,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 02-04-PLAN.md — Password generator, trash with 30-day retention, and bounded rendering across every collection surface
+- [x] 02-04-PLAN.md — Password generator, trash with 30-day retention, and bounded rendering across every collection surface
 
 ### Phase 3: Trust, Backup & Recovery
 
@@ -131,6 +131,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Secure Vault Setup & Unlock | 5/5 | Complete    | 2026-08-19 |
-| 2. Vault Core — Entries, Organization & Search | 3/4 | In Progress|  |
+| 2. Vault Core — Entries, Organization & Search | 4/4 | In Progress|  |
 | 3. Trust, Backup & Recovery | 0/TBD | Not started | - |
 | 4. OCR Lens Module | 0/TBD | Not started | - |

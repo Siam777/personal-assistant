@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 02
 current_phase_name: Vault Core — Entries, Organization & Search
-status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-08-19T22:25:43.460Z"
+status: verifying
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-08-19T22:46:56.295Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-18)
 
 Phase: 02 (Vault Core — Entries, Organization & Search) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-20 — Phase 02 execution started
 
-Progress: [█████████░] 89%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [█████████░] 89%
 | Phase 02 P01 | 90min | 2 tasks | 16 files |
 | Phase 02 P02 | 70min | 3 tasks | 9 files |
 | Phase 02 P03 | 65min | 3 tasks | 13 files |
+| Phase 02 P04 | 45min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,10 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-03: Typed search.ts's query builder against a hand-derived LeftJoinedSchema mirroring Kysely's own Nullable<T> transform for a left-joined table, after SelectQueryBuilder<VaultDbSchema, ...> failed to typecheck against a real post-leftJoin builder
 - [Phase ?]: 02-03: setEntryTags is full-replacement (matches entryUpdateSchema's full-representation contract) — createEntry/updateEntry both call it with input.tags ?? [], so omitting tags on a PATCH clears them
 - [Phase ?]: 02-03: EntryListScreen's handleSaved now refetches through the single fetch path instead of hand-splicing a partial EntrySummary, since folderName/tags are server-resolved values the client cannot correctly synthesize from the Entry DTO alone
+- [Phase ?]: 02-04: generatePassword uses rejection-sampled crypto.getRandomValues draws (no modulo bias) with one seed char per enabled class, Fisher-Yates shuffled with the same source; throws rather than a fallback alphabet when no class is enabled
+- [Phase ?]: 02-04: permanentlyDeleteEntry/emptyTrash/purgeExpiredTrash all pre-check deleted_at is not null before touching entry_tags, so a live entry's tag links are never touched even transiently
+- [Phase ?]: 02-04: purgeExpiredTrash(db, now) takes an explicit Kysely handle rather than getDb(), since onVaultOpened runs it before the session singleton takes ownership of the freshly-opened handle
+- [Phase ?]: 02-04: TrashView hardcodes the exact UI-SPEC '30 days' empty-state sentence (literal-match acceptance criterion) while TRASH_RETENTION_DAYS remains the actual source of truth for the days-remaining chip's arithmetic
 
 ### Pending Todos
 
@@ -104,6 +109,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T22:25:43.437Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-08-19T22:46:56.267Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
