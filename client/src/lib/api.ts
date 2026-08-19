@@ -373,6 +373,15 @@ export function emptyTrash(): Promise<{ removed: number }> {
  */
 export const TRASH_RETENTION_DAYS = 30;
 
+/**
+ * Shared render-window size for every card-per-entry collection surface
+ * (the entry list, search results, and the trash list all go through the
+ * same card renderer). Bounds the DOM cost of a large vault without a
+ * virtualization dependency — a "Show 200 more" control raises the window
+ * by this amount rather than mounting the whole collection at once.
+ */
+export const ENTRY_RENDER_WINDOW = 200;
+
 // --- Folders & tags (Phase 2 Plan 3) --------------------------------------
 
 export interface Folder {

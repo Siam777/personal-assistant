@@ -11,7 +11,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { CreditCard, KeyRound, LogIn, StickyNote } from "lucide-react";
-import { listEntries, type Entry, type EntrySummary } from "../../lib/api";
+import { ENTRY_RENDER_WINDOW, listEntries, type Entry, type EntrySummary } from "../../lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -82,6 +82,15 @@ export default function EntryListScreen() {
   const [query, setQuery] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(ENTRY_RENDER_WINDOW);
+
+  // Narrowing a search (or switching folder/tag) must not leave a stale
+  // expanded window from a previous, larger result set — reset on every
+  // filter-input change, independent of the data-fetch effect below so a
+  // plain refetch (save, delete, restore) does not also collapse the window.
+  useEffect(() => {
+    setVisibleCount(ENTRY_RENDER_WINDOW);
+  }, [query, selectedFolderId, activeTag]);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,7 +308,7 @@ export default function EntryListScreen() {
               ) : (
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
                   <div className="flex flex-1 flex-col gap-3">
-                    {list.map((entry) => {
+                    {list.slice(0, visibleCount).map((entry) => {
                       const Icon = ENTRY_TYPE_ICONS[entry.type];
                       const isSelected = entry.id === selectedId;
                       const visibleTags = entry.tags.slice(0, MAX_VISIBLE_TAGS);
@@ -338,6 +347,16 @@ export default function EntryListScreen() {
                         </Card>
                       );
                     })}
+
+                    {list.length > visibleCount && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setVisibleCount((count) => count + ENTRY_RENDER_WINDOW)}
+                      >
+                        Show 200 more ({list.length - visibleCount} remaining)
+                      </Button>
+                    )}
                   </div>
 
                   {selectedId && (

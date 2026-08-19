@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { CreditCard, KeyRound, LogIn, StickyNote } from "lucide-react";
 import {
   emptyTrash,
+  ENTRY_RENDER_WINDOW,
   listTrash,
   permanentlyDeleteEntry,
   restoreEntry,
@@ -58,6 +59,7 @@ export default function TrashView({ onRestored }: TrashViewProps) {
   const [loadError, setLoadError] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
   const [emptyingTrash, setEmptyingTrash] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(ENTRY_RENDER_WINDOW);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,7 +177,7 @@ export default function TrashView({ onRestored }: TrashViewProps) {
       </div>
 
       <div className="flex flex-col gap-3">
-        {list.map((entry) => {
+        {list.slice(0, visibleCount).map((entry) => {
           const Icon = ENTRY_TYPE_ICONS[entry.type];
           const remaining = daysRemaining(entry.deletedAt);
 
@@ -224,6 +226,16 @@ export default function TrashView({ onRestored }: TrashViewProps) {
             </Card>
           );
         })}
+
+        {list.length > visibleCount && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setVisibleCount((count) => count + ENTRY_RENDER_WINDOW)}
+          >
+            Show 200 more ({list.length - visibleCount} remaining)
+          </Button>
+        )}
       </div>
     </div>
   );
