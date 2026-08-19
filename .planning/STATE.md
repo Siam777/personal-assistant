@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
+current_phase: 02
 current_phase_name: Vault Core — Entries, Organization & Search
 status: executing
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-08-19T18:11:45.626Z"
-last_activity: 2026-08-19
-last_activity_desc: Phase 01 execution resumed (wave continue)
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-08-19T19:38:48.900Z"
+last_activity: 2026-08-20
+last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-18)
 
 **Core value:** Secrets stored in the vault are always safe (real encryption, never plaintext) and always retrievable when needed — this must never fail or leak.
-**Current focus:** Phase 01 — Secure Vault Setup & Unlock
+**Current focus:** Phase 02 — Vault Core — Entries, Organization & Search
 
 ## Current Position
 
-Phase: 2 — Vault Core — Entries, Organization & Search
-Plan: Not started
+Phase: 02 (Vault Core — Entries, Organization & Search) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-08-19 — Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-08-20 — Phase 02 execution started
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P05 | 95min | 3 tasks | 7 files |
+| Phase 02 P01 | 90min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - Roadmap: OCR (Phase 4) sequenced last and scoped to depend only on the Phase 1 app shell — research confirms it is architecturally decoupled from vault crypto/session, so it can't block or be blocked by vault work.
 - [Phase ?]: Resolve TypeScript/Vite dev-tool entrypoints via package.json bin fields (not require.resolve deep specifiers) to bypass Windows script shims — Vite's exports map rejects any ./bin/* deep specifier
 - [Phase ?]: Windows-only detached:true child spawn isolates each dev-stack child into its own console-detached process group, immune to the console-wide Ctrl-C broadcast; killTree is now async and awaited before dev.mjs exits
+- [Phase ?]: 02-01: Kept the discriminated-union entryCreateSchema covering all four entry types in this plan even though only api_key has a UI, to avoid a union rewrite in 02-02
+- [Phase ?]: 02-01: Raised server vitest testTimeout to 20s — the KDF-heavy auth/entries suite was flaking against the 5s default under worker-pool contention, not a logic defect
+- [Phase ?]: 02-01: Deferred the tracer's interactive UI human-check to end-of-phase UAT (workflow.human_verify_mode) rather than blocking indefinitely — sandboxed dev servers kept getting killed and the real vault's master password/TOTP are not available to the executor
 
 ### Pending Todos
 
@@ -92,6 +96,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T17:29:58.972Z
-Stopped at: Phase 2 UI-SPEC approved
-Resume file: .planning/phases/02-vault-core-entries-organization-search/02-UI-SPEC.md
+Last session: 2026-08-19T19:38:48.872Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
