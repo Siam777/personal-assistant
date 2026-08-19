@@ -245,6 +245,8 @@ describe("folders, tags, and search", () => {
 
     const patchRes = await patchEntry(baseUrl, entryA.id, {
       ...API_KEY_ENTRY,
+      folderId: null,
+      notes: null,
       tags: ["personal"],
     });
     expect(patchRes.status).toBe(200);

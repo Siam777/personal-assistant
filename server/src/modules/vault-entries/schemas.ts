@@ -79,14 +79,46 @@ export type EntryCreateInput = z.infer<typeof entryCreateSchema>;
 
 /**
  * Full-representation update contract (02-02-PLAN.md Task 1): the client
- * always submits every mutable field on PATCH, so this mirrors
- * `entryCreateSchema` exactly rather than making every field optional for a
- * partial-merge semantics that has no caller. `updateEntry` in `entries.ts`
- * is the one place that additionally enforces the immutable-type rule
- * (stored `type` must match `input.type`) — this schema only validates
- * shape, not identity against an existing row.
+ * always submits every mutable field on PATCH. Unlike `entryCreateSchema`,
+ * `folderId`/`notes`/`tags` are REQUIRED (not `.optional()`) here — a PATCH
+ * that omits one of these fields must fail validation with a 400 rather
+ * than silently being treated as "clear this field" by `updateEntry`'s
+ * `input.tags ?? []` / `input.folderId ?? null` / `input.notes ?? null`
+ * defaults (CR-01, 02-REVIEW.md). `folderId`/`notes` stay nullable — an
+ * entry legitimately has no folder or no notes — but the key must be
+ * present. `updateEntry` in `entries.ts` is the one place that additionally
+ * enforces the immutable-type rule (stored `type` must match `input.type`)
+ * — this schema only validates shape, not identity against an existing row.
  */
-export const entryUpdateSchema = entryCreateSchema;
+const commonUpdateFields = {
+  name: commonEntryFields.name,
+  folderId: z.string().nullable(),
+  notes: z.string().max(10000).nullable(),
+  tags: z.array(z.string().min(1).max(50)),
+};
+
+export const entryUpdateSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("api_key"),
+    payload: apiKeyPayloadSchema,
+    ...commonUpdateFields,
+  }),
+  z.object({
+    type: z.literal("login"),
+    payload: loginPayloadSchema,
+    ...commonUpdateFields,
+  }),
+  z.object({
+    type: z.literal("note"),
+    payload: notePayloadSchema,
+    ...commonUpdateFields,
+  }),
+  z.object({
+    type: z.literal("card"),
+    payload: cardPayloadSchema,
+    ...commonUpdateFields,
+  }),
+]);
 
 export type EntryUpdateInput = z.infer<typeof entryUpdateSchema>;
 

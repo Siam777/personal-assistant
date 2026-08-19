@@ -431,6 +431,9 @@ describe("POST /api/vault/entries + GET /api/vault/entries", () => {
     const updateBody = {
       type: "api_key",
       name: "Renamed key",
+      folderId: null,
+      notes: null,
+      tags: [],
       payload: { key: "sk-updated-456", endpoint: "https://openrouter.ai/api/v1", model: "gpt-4" },
     };
 
@@ -453,7 +456,12 @@ describe("POST /api/vault/entries + GET /api/vault/entries", () => {
 
     const created = await initAndCreate(baseUrl, API_KEY_ENTRY);
 
-    const patchRes = await patchEntry(baseUrl, created.id, LOGIN_ENTRY);
+    const patchRes = await patchEntry(baseUrl, created.id, {
+      ...LOGIN_ENTRY,
+      folderId: null,
+      notes: null,
+      tags: [],
+    });
     expect(patchRes.status).toBe(400);
     expect(await patchRes.json()).toEqual({ error: "Entry type cannot be changed" });
 
@@ -462,6 +470,58 @@ describe("POST /api/vault/entries + GET /api/vault/entries", () => {
     const fetched = (await getRes.json()) as { type: string; payload: unknown };
     expect(fetched.type).toBe("api_key");
     expect(fetched.payload).toEqual(API_KEY_ENTRY.payload);
+  });
+
+  it("PATCH rejects a body missing folderId, notes, or tags with 400 instead of silently clearing them (CR-01)", async () => {
+    harness = await startFreshApp();
+    const { baseUrl } = harness;
+
+    const created = await initAndCreate(baseUrl, { ...API_KEY_ENTRY, tags: ["work"] });
+    const setupPatch = await patchEntry(baseUrl, created.id, {
+      type: "api_key",
+      name: "Tagged key",
+      folderId: null,
+      notes: "keep me",
+      tags: ["work"],
+      payload: API_KEY_ENTRY.payload,
+    });
+    expect(setupPatch.status).toBe(200);
+
+    // Omitting `tags` must 400, not silently untag the entry.
+    const missingTags = await patchEntry(baseUrl, created.id, {
+      type: "api_key",
+      name: "Tagged key",
+      folderId: null,
+      notes: "keep me",
+      payload: API_KEY_ENTRY.payload,
+    });
+    expect(missingTags.status).toBe(400);
+
+    // Omitting `notes` must 400, not silently clear it.
+    const missingNotes = await patchEntry(baseUrl, created.id, {
+      type: "api_key",
+      name: "Tagged key",
+      folderId: null,
+      tags: ["work"],
+      payload: API_KEY_ENTRY.payload,
+    });
+    expect(missingNotes.status).toBe(400);
+
+    // Omitting `folderId` must 400, not silently uncategorize it.
+    const missingFolderId = await patchEntry(baseUrl, created.id, {
+      type: "api_key",
+      name: "Tagged key",
+      notes: "keep me",
+      tags: ["work"],
+      payload: API_KEY_ENTRY.payload,
+    });
+    expect(missingFolderId.status).toBe(400);
+
+    // Confirm none of the rejected requests mutated the stored entry.
+    const getRes = await getEntry(baseUrl, created.id);
+    const fetched = (await getRes.json()) as { notes: string | null; tags: string[] };
+    expect(fetched.notes).toBe("keep me");
+    expect(fetched.tags).toEqual(["work"]);
   });
 
   it("a note edited with unicode (emoji, CJK, combining diacritic) round-trips byte-identical", async () => {
@@ -475,6 +535,9 @@ describe("POST /api/vault/entries + GET /api/vault/entries", () => {
     const updateBody = {
       type: "note",
       name: unicodeName,
+      folderId: null,
+      notes: null,
+      tags: [],
       payload: { body: unicodeBody },
     };
 
@@ -539,7 +602,12 @@ describe("POST /api/vault/entries + GET /api/vault/entries", () => {
     const getRes = await getEntry(baseUrl, unknownId);
     expect(getRes.status).toBe(404);
 
-    const patchRes = await patchEntry(baseUrl, unknownId, API_KEY_ENTRY);
+    const patchRes = await patchEntry(baseUrl, unknownId, {
+      ...API_KEY_ENTRY,
+      folderId: null,
+      notes: null,
+      tags: [],
+    });
     expect(patchRes.status).toBe(404);
 
     const deleteRes = await deleteEntry(baseUrl, unknownId);
