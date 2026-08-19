@@ -25,9 +25,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Organization & Search
 
-- [ ] **ORG-01**: User can organize entries into folders/categories
-- [ ] **ORG-02**: User can tag entries and filter by tag
-- [ ] **ORG-03**: User can search across all vault entries by name/metadata
+- [x] **ORG-01**: User can organize entries into folders/categories
+- [x] **ORG-02**: User can tag entries and filter by tag
+- [x] **ORG-03**: User can search across all vault entries by name/metadata
 
 ### Trust & Access
 
@@ -97,9 +97,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VAULT-03 | Phase 2 | Complete |
 | VAULT-04 | Phase 2 | Complete |
 | VAULT-05 | Phase 2 | Pending |
-| ORG-01 | Phase 2 | Pending |
-| ORG-02 | Phase 2 | Pending |
-| ORG-03 | Phase 2 | Pending |
+| ORG-01 | Phase 2 | Complete |
+| ORG-02 | Phase 2 | Complete |
+| ORG-03 | Phase 2 | Complete |
 | TRUST-01 | Phase 3 | Pending |
 | TRUST-02 | Phase 3 | Pending |
 | TRUST-03 | Phase 3 | Pending |

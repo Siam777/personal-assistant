@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 0
 waived_count: 0
-fixed_count: 1
+fixed_count: 2
 total_count: 2
-last_updated: 2026-08-18T15:39:47.459Z
+last_updated: 2026-08-19T22:23:22.983Z
 ---
 
 # Broken Windows Ledger
@@ -16,7 +16,7 @@ last_updated: 2026-08-18T15:39:47.459Z
 | id | phase | kind | file | line | description | status | reason | recorded_at | resolved_at |
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 01 | stub | client/src/App.tsx | 63 | Unlocked view renders a plan-sanctioned placeholder panel text instead of the real unlocked screen; Plan 01-03 replaces it with the real unlock/locked-state screens | fixed |  | 2026-08-18T05:56:35.763Z | 2026-08-18T15:39:47.459Z |
-| 2 | 01 | stub | client/src/App.tsx |  | Unlocked branch renders a placeholder panel instead of the real vault entry view; Phase 2 delivers the real view (scope boundary, not a gap) | open |  | 2026-08-18T09:49:01.662Z |  |
+| 2 | 01 | stub | client/src/App.tsx |  | Unlocked branch renders a placeholder panel instead of the real vault entry view; Phase 2 delivers the real view (scope boundary, not a gap) | fixed |  | 2026-08-18T09:49:01.662Z | 2026-08-19T22:23:22.983Z |
 
 ````json
 [
@@ -39,10 +39,10 @@ last_updated: 2026-08-18T15:39:47.459Z
     "file": "client/src/App.tsx",
     "line": null,
     "description": "Unlocked branch renders a placeholder panel instead of the real vault entry view; Phase 2 delivers the real view (scope boundary, not a gap)",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-08-18T09:49:01.662Z",
-    "resolved_at": null
+    "resolved_at": "2026-08-19T22:23:22.983Z"
   }
 ]
 ````

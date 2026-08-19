@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Vault Core — Entries, Organization & Search
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-08-19T22:00:03.468Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-08-19T22:25:43.460Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-18)
 ## Current Position
 
 Phase: 02 (Vault Core — Entries, Organization & Search) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-08-20 — Phase 02 execution started
 
-Progress: [████████░░] 78%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 78%
 | Phase 01 P05 | 95min | 3 tasks | 7 files |
 | Phase 02 P01 | 90min | 2 tasks | 16 files |
 | Phase 02 P02 | 70min | 3 tasks | 9 files |
+| Phase 02 P03 | 65min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-02: Aliased entryUpdateSchema directly to entryCreateSchema (identical discriminated-union shape) rather than redeclaring an equivalent schema, avoiding drift between create and update contracts
 - [Phase ?]: 02-02: Added .trim() to the entry name Zod field so a whitespace-only name is rejected 400, matching the plan's own required edge case that the pre-existing .min(1) alone did not satisfy
 - [Phase ?]: 02-02: EntryDetail masks only the field names REQUIREMENTS.md/UI-SPEC.md name explicitly as secret (api_key.key, login.password, note.body, card.number+cvv) behind an independent per-field 30s reveal timer
+- [Phase ?]: 02-03: Typed search.ts's query builder against a hand-derived LeftJoinedSchema mirroring Kysely's own Nullable<T> transform for a left-joined table, after SelectQueryBuilder<VaultDbSchema, ...> failed to typecheck against a real post-leftJoin builder
+- [Phase ?]: 02-03: setEntryTags is full-replacement (matches entryUpdateSchema's full-representation contract) — createEntry/updateEntry both call it with input.tags ?? [], so omitting tags on a PATCH clears them
+- [Phase ?]: 02-03: EntryListScreen's handleSaved now refetches through the single fetch path instead of hand-splicing a partial EntrySummary, since folderName/tags are server-resolved values the client cannot correctly synthesize from the Entry DTO alone
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T22:00:03.445Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-08-19T22:25:43.437Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
