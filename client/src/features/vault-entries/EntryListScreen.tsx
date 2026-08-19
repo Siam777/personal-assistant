@@ -1,24 +1,28 @@
 /**
- * Entry list container: fetch, state, empty state, and the "New entry"
- * affordance. Mirrors `App.tsx`'s fetch-on-mount effect (cancelled-flag
- * cleanup). Only `api_key` has a creation form in this plan (Plan 02-02
- * adds the other three entry types); the type picker this dialog would
- * otherwise show collapses to opening `EntryForm` directly.
+ * Entry list container: fetch, loading/error/populated/partial/zero-one-many
+ * states, selection, and the "New entry"/edit dialog. Mirrors `App.tsx`'s
+ * fetch-on-mount effect (cancelled-flag cleanup). Selecting a card renders
+ * `EntryDetail` beside the list; `EntryDetail`'s `onEdit` reopens the same
+ * dialog in edit mode, and `onDeleted` clears the selection and drops the
+ * entry from local list state without a full refetch.
  */
 
 import { useEffect, useState } from "react";
-import { KeyRound } from "lucide-react";
+import { CreditCard, KeyRound, LogIn, StickyNote } from "lucide-react";
 import { listEntries, type Entry, type EntrySummary } from "../../lib/api";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import EntryDetail from "./EntryDetail";
 import EntryForm from "./EntryForm";
 
 const ENTRY_TYPE_ICONS: Record<EntrySummary["type"], typeof KeyRound> = {
   api_key: KeyRound,
-  login: KeyRound,
-  note: KeyRound,
-  card: KeyRound,
+  login: LogIn,
+  note: StickyNote,
+  card: CreditCard,
 };
 
 function formatRelativeUpdatedAt(isoTimestamp: string): string {
@@ -36,63 +40,121 @@ function formatRelativeUpdatedAt(isoTimestamp: string): string {
 
 export default function EntryListScreen() {
   const [entries, setEntries] = useState<EntrySummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     listEntries()
       .then((result) => {
-        if (!cancelled) setEntries(result);
-      })
-      .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Couldn't load your entries.");
+          setEntries(result);
+          setLoadError(false);
         }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [retryToken]);
 
   function handleSaved(entry: Entry): void {
+    const summary: EntrySummary = {
+      id: entry.id,
+      type: entry.type,
+      name: entry.name,
+      folderId: entry.folderId,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt,
+    };
     setEntries((current) => {
-      const summary: EntrySummary = {
-        id: entry.id,
-        type: entry.type,
-        name: entry.name,
-        folderId: entry.folderId,
-        createdAt: entry.createdAt,
-        updatedAt: entry.updatedAt,
-      };
-      return current ? [summary, ...current] : [summary];
+      if (!current) return [summary];
+      const exists = current.some((e) => e.id === summary.id);
+      return exists
+        ? current.map((e) => (e.id === summary.id ? summary : e))
+        : [summary, ...current];
     });
     setDialogOpen(false);
+    setEditingEntry(null);
+  }
+
+  function handleEdit(entry: Entry): void {
+    setEditingEntry(entry);
+    setDialogOpen(true);
+  }
+
+  function handleDeleted(): void {
+    setEntries((current) => (current ? current.filter((e) => e.id !== selectedId) : current));
+    setSelectedId(null);
   }
 
   const newEntryButton = (
     <DialogTrigger asChild>
-      <Button type="button">New entry</Button>
+      <Button type="button" onClick={() => setEditingEntry(null)}>
+        New entry
+      </Button>
     </DialogTrigger>
   );
 
-  if (error) {
+  // Initial load only — nothing fetched yet and no error yet either.
+  if (entries === null && !loadError) {
     return (
-      <div role="alert" className="text-sm text-destructive">
-        {error}
+      <div className="flex flex-col gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full" />
+        ))}
       </div>
     );
   }
 
-  if (entries === null) {
-    return <p className="text-sm text-muted-foreground">Loading your entries…</p>;
+  // Initial load failed — nothing was ever loaded, so there is no stale
+  // list to keep showing underneath the banner.
+  if (entries === null && loadError) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <div
+          role="alert"
+          className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          Couldn't load your entries.
+        </div>
+        <Button type="button" variant="outline" onClick={() => setRetryToken((n) => n + 1)}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
+  const list = entries ?? [];
+
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      {entries.length === 0 ? (
+    <Dialog
+      open={dialogOpen}
+      onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) setEditingEntry(null);
+      }}
+    >
+      {loadError && (
+        <div
+          role="alert"
+          className="mb-4 flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          <span>Couldn't load your entries.</span>
+          <Button type="button" variant="outline" size="sm" onClick={() => setRetryToken((n) => n + 1)}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {list.length === 0 ? (
         <div className="flex flex-col items-start gap-3 py-16">
           <h2 className="text-[28px] leading-[1.2] font-semibold">Your vault is empty</h2>
           <p className="text-base text-muted-foreground">
@@ -101,32 +163,63 @@ export default function EntryListScreen() {
           {newEntryButton}
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[20px] leading-[1.3] font-semibold">Vault</h2>
-            {newEntryButton}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
+          <div className="flex flex-1 flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <h2 className="text-[20px] leading-[1.3] font-semibold">Vault</h2>
+                {list.length > 1 && (
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {list.length} entries
+                  </span>
+                )}
+              </div>
+              {newEntryButton}
+            </div>
+            <div className="flex flex-col gap-3">
+              {list.map((entry) => {
+                const Icon = ENTRY_TYPE_ICONS[entry.type];
+                const isSelected = entry.id === selectedId;
+                return (
+                  <Card
+                    key={entry.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedId(entry.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedId(entry.id);
+                      }
+                    }}
+                    className={`flex-row items-center gap-3 px-4 ${
+                      isSelected ? "ring-2 ring-ring" : ""
+                    }`}
+                  >
+                    <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <div className="flex flex-1 flex-col">
+                      <span className="text-base font-normal">{entry.name}</span>
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        {formatRelativeUpdatedAt(entry.updatedAt)}
+                      </span>
+                    </div>
+                    {entry.folderId === null && <Badge variant="outline">Uncategorized</Badge>}
+                  </Card>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex flex-col gap-3">
-            {entries.map((entry) => {
-              const Icon = ENTRY_TYPE_ICONS[entry.type];
-              return (
-                <Card key={entry.id} className="flex-row items-center gap-3 px-4">
-                  <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  <div className="flex flex-1 flex-col">
-                    <span className="text-[20px] leading-[1.3] font-semibold">{entry.name}</span>
-                    <span className="text-sm font-semibold text-muted-foreground">
-                      {formatRelativeUpdatedAt(entry.updatedAt)}
-                    </span>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+
+          {selectedId && (
+            <div className="flex-1 rounded-xl bg-card p-6 ring-1 ring-foreground/10 md:max-w-md">
+              <EntryDetail entryId={selectedId} onEdit={handleEdit} onDeleted={handleDeleted} />
+            </div>
+          )}
         </div>
       )}
 
       <DialogContent>
-        <EntryForm onSaved={handleSaved} />
+        <EntryForm key={editingEntry?.id ?? "create"} entry={editingEntry ?? undefined} onSaved={handleSaved} />
       </DialogContent>
     </Dialog>
   );
