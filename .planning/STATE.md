@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: Vault Core — Entries, Organization & Search
 status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-08-19T17:01:02.089Z"
+stopped_at: Phase 2 UI-SPEC approved
+last_updated: "2026-08-19T17:29:58.983Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 01 execution resumed (wave continue)
 progress:
@@ -92,6 +92,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T17:01:02.073Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-vault-core-entries-organization-search/02-CONTEXT.md
+Last session: 2026-08-19T17:29:58.972Z
+Stopped at: Phase 2 UI-SPEC approved
+Resume file: .planning/phases/02-vault-core-entries-organization-search/02-UI-SPEC.md
