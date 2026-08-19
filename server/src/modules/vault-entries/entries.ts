@@ -9,6 +9,8 @@
 
 import { randomUUID } from "node:crypto";
 import { getDb } from "../auth/session.js";
+import { applyEntryFilters, type EntryListFilter } from "./search.js";
+import { setEntryTags, tagsForEntries } from "./tags.js";
 import type { EntryCreateInput, EntryPayload, EntryType, EntryUpdateInput } from "./schemas.js";
 
 /**
@@ -32,6 +34,8 @@ export interface EntrySummary {
   type: EntryType;
   name: string;
   folderId: string | null;
+  folderName: string | null;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -41,6 +45,7 @@ export interface Entry {
   type: EntryType;
   name: string;
   folderId: string | null;
+  tags: string[];
   payload: EntryPayload;
   notes: string | null;
   createdAt: string;
@@ -53,35 +58,45 @@ interface EntrySummaryRow {
   type: EntryType;
   name: string;
   folder_id: string | null;
+  folder_name: string | null;
   created_at: string;
   updated_at: string;
 }
 
-interface EntryRow extends EntrySummaryRow {
+interface EntryRow {
+  id: string;
+  type: EntryType;
+  name: string;
+  folder_id: string | null;
   payload: string;
   notes: string | null;
+  created_at: string;
+  updated_at: string;
   deleted_at: string | null;
 }
 
 /** Never reads payload/notes columns — this is the mechanism enforcing the
  * "list responses never carry a decrypted secret value" prohibition. */
-export function rowToSummary(row: EntrySummaryRow): EntrySummary {
+export function rowToSummary(row: EntrySummaryRow, tags: string[]): EntrySummary {
   return {
     id: row.id,
     type: row.type,
     name: row.name,
     folderId: row.folder_id,
+    folderName: row.folder_name,
+    tags,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-export function rowToEntry(row: EntryRow): Entry {
+export function rowToEntry(row: EntryRow, tags: string[]): Entry {
   return {
     id: row.id,
     type: row.type,
     name: row.name,
     folderId: row.folder_id,
+    tags,
     payload: JSON.parse(row.payload) as EntryPayload,
     notes: row.notes,
     createdAt: row.created_at,
@@ -91,9 +106,11 @@ export function rowToEntry(row: EntryRow): Entry {
 }
 
 /**
- * Inserts a new entry row. Never dedupes or upserts: two calls with
- * identical field values produce two rows with distinct ids (VAULT-01
- * idempotency requirement in 02-01-PLAN.md's must_haves).
+ * Inserts a new entry row, then persists its tags via `setEntryTags` —
+ * closing the gap where the `tags` field has been part of the request
+ * contract since 02-01 without being persisted. Never dedupes or upserts:
+ * two calls with identical field values produce two rows with distinct ids
+ * (VAULT-01 idempotency requirement in 02-01-PLAN.md's must_haves).
  */
 export async function createEntry(input: EntryCreateInput): Promise<Entry> {
   const db = getDb();
@@ -116,25 +133,42 @@ export async function createEntry(input: EntryCreateInput): Promise<Entry> {
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  return rowToEntry(row);
+  await setEntryTags(id, input.tags ?? []);
+  const tagsByEntry = await tagsForEntries([id]);
+
+  return rowToEntry(row as EntryRow, tagsByEntry.get(id) ?? []);
 }
 
 /**
- * Non-deleted entries only, ordered by most-recently-updated first, then
- * by id so equal timestamps still have a deterministic, stable order.
- * Selects only summary columns — payload and notes are never read here.
+ * Non-deleted entries only (or exclusively deleted ones when
+ * `filter.deleted` is true), filtered through `applyEntryFilters` for
+ * folder/tag/search composition, ordered by most-recently-updated first
+ * then by id so two entries sharing an `updated_at` value still have a
+ * deterministic, stable order across repeated identical requests. Selects
+ * only summary columns plus the joined folder name — payload and notes
+ * are never read here.
  */
-export async function listEntries(): Promise<EntrySummary[]> {
+export async function listEntries(filter: EntryListFilter = {}): Promise<EntrySummary[]> {
   const db = getDb();
   const rows = await db
     .selectFrom("entries")
-    .select(["id", "type", "name", "folder_id", "created_at", "updated_at"])
-    .where("deleted_at", "is", null)
-    .orderBy("updated_at", "desc")
-    .orderBy("id", "asc")
+    .leftJoin("folders", "folders.id", "entries.folder_id")
+    .$call((qb) => applyEntryFilters(qb, filter))
+    .select([
+      "entries.id",
+      "entries.type",
+      "entries.name",
+      "entries.folder_id",
+      "folders.name as folder_name",
+      "entries.created_at",
+      "entries.updated_at",
+    ])
+    .orderBy("entries.updated_at", "desc")
+    .orderBy("entries.id", "asc")
     .execute();
 
-  return rows.map(rowToSummary);
+  const tagsByEntry = await tagsForEntries(rows.map((row) => row.id));
+  return rows.map((row) => rowToSummary(row as EntrySummaryRow, tagsByEntry.get(row.id) ?? []));
 }
 
 /**
@@ -151,16 +185,19 @@ export async function getEntry(id: string): Promise<Entry | null> {
     .where("deleted_at", "is", null)
     .executeTakeFirst();
 
-  return row ? rowToEntry(row as EntryRow) : null;
+  if (!row) return null;
+  const tagsByEntry = await tagsForEntries([id]);
+  return rowToEntry(row as EntryRow, tagsByEntry.get(id) ?? []);
 }
 
 /**
  * Full-representation update: reads the existing row first, returns null
  * when it is absent or already soft-deleted, throws
  * `EntryTypeImmutableError` when `input.type` differs from the stored
- * row's `type`. Otherwise updates `name`/`folder_id`/`notes`/`payload` and
- * refreshes `updated_at`. Updates in place — calling this twice with the
- * identical body leaves exactly one row (idempotent).
+ * row's `type`. Otherwise updates `name`/`folder_id`/`notes`/`payload`,
+ * replaces the entry's tag links exactly via `setEntryTags`, and refreshes
+ * `updated_at`. Updates in place — calling this twice with the identical
+ * body leaves exactly one row (idempotent).
  */
 export async function updateEntry(id: string, input: EntryUpdateInput): Promise<Entry | null> {
   const db = getDb();
@@ -188,7 +225,10 @@ export async function updateEntry(id: string, input: EntryUpdateInput): Promise<
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  return rowToEntry(row);
+  await setEntryTags(id, input.tags ?? []);
+  const tagsByEntry = await tagsForEntries([id]);
+
+  return rowToEntry(row as EntryRow, tagsByEntry.get(id) ?? []);
 }
 
 /**

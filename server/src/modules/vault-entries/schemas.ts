@@ -95,3 +95,29 @@ export type EntryPayload =
   | z.infer<typeof loginPayloadSchema>
   | z.infer<typeof notePayloadSchema>
   | z.infer<typeof cardPayloadSchema>;
+
+// --- Folders & search (02-03-PLAN.md) -------------------------------------
+
+export const folderCreateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+});
+export type FolderCreateInput = z.infer<typeof folderCreateSchema>;
+
+// Same shape as create — renaming a folder is submitting a new full name,
+// not a partial patch.
+export const folderRenameSchema = folderCreateSchema;
+export type FolderRenameInput = z.infer<typeof folderRenameSchema>;
+
+/**
+ * Validates `GET /entries`'s query string. `validate()` (the shared
+ * middleware) only ever parses `req.body`, so the route handler parses
+ * this one explicitly with `safeParse` rather than adding a second
+ * middleware for the one query-string route in this router.
+ */
+export const entryListQuerySchema = z.object({
+  q: z.string().max(200).optional(),
+  folderId: z.string().optional(),
+  tag: z.string().optional(),
+  deleted: z.literal("true").optional(),
+});
+export type EntryListQuery = z.infer<typeof entryListQuerySchema>;
