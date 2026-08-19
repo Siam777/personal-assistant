@@ -9,7 +9,23 @@
 
 import { randomUUID } from "node:crypto";
 import { getDb } from "../auth/session.js";
-import type { EntryCreateInput, EntryPayload, EntryType } from "./schemas.js";
+import type { EntryCreateInput, EntryPayload, EntryType, EntryUpdateInput } from "./schemas.js";
+
+/**
+ * Thrown by `updateEntry` when the request declares a `type` different from
+ * the stored row's `type` — entry type is immutable after creation because
+ * a type change would silently orphan the stored payload shape (a `login`
+ * payload interpreted as a `card` payload, for instance). `routes.ts`
+ * catches this specific error and converts it to a 400 with a specific
+ * message, distinct from the generic 500 every other thrown error falls
+ * through to.
+ */
+export class EntryTypeImmutableError extends Error {
+  constructor() {
+    super("Entry type cannot be changed");
+    this.name = "EntryTypeImmutableError";
+  }
+}
 
 export interface EntrySummary {
   id: string;
@@ -119,4 +135,77 @@ export async function listEntries(): Promise<EntrySummary[]> {
     .execute();
 
   return rows.map(rowToSummary);
+}
+
+/**
+ * The only function in this module that reads the `payload` column. Returns
+ * null for an absent id or a soft-deleted entry — trashed entries are not
+ * served through the normal read path (T-02-12).
+ */
+export async function getEntry(id: string): Promise<Entry | null> {
+  const db = getDb();
+  const row = await db
+    .selectFrom("entries")
+    .selectAll()
+    .where("id", "=", id)
+    .where("deleted_at", "is", null)
+    .executeTakeFirst();
+
+  return row ? rowToEntry(row as EntryRow) : null;
+}
+
+/**
+ * Full-representation update: reads the existing row first, returns null
+ * when it is absent or already soft-deleted, throws
+ * `EntryTypeImmutableError` when `input.type` differs from the stored
+ * row's `type`. Otherwise updates `name`/`folder_id`/`notes`/`payload` and
+ * refreshes `updated_at`. Updates in place — calling this twice with the
+ * identical body leaves exactly one row (idempotent).
+ */
+export async function updateEntry(id: string, input: EntryUpdateInput): Promise<Entry | null> {
+  const db = getDb();
+  const existing = await db
+    .selectFrom("entries")
+    .selectAll()
+    .where("id", "=", id)
+    .where("deleted_at", "is", null)
+    .executeTakeFirst();
+
+  if (!existing) return null;
+  if (existing.type !== input.type) throw new EntryTypeImmutableError();
+
+  const now = new Date().toISOString();
+  const row = await db
+    .updateTable("entries")
+    .set({
+      name: input.name,
+      folder_id: input.folderId ?? null,
+      notes: input.notes ?? null,
+      payload: JSON.stringify(input.payload),
+      updated_at: now,
+    })
+    .where("id", "=", id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return rowToEntry(row);
+}
+
+/**
+ * Sets `deleted_at` where the id matches and it is not already deleted —
+ * this module never issues a hard-delete query against the `entries` table
+ * (D-04, source-gated by the plan's own acceptance criteria). Returns
+ * whether a row was affected, so the route can answer 404 when the id is
+ * absent or already trashed.
+ */
+export async function softDeleteEntry(id: string): Promise<boolean> {
+  const db = getDb();
+  const result = await db
+    .updateTable("entries")
+    .set({ deleted_at: new Date().toISOString() })
+    .where("id", "=", id)
+    .where("deleted_at", "is", null)
+    .executeTakeFirst();
+
+  return (result?.numUpdatedRows ?? 0n) > 0n;
 }

@@ -43,7 +43,10 @@ export const cardPayloadSchema = z.object({
 // D-03: every entry, regardless of type, also gets one optional freeform
 // `notes` field in addition to its type-specific fields.
 const commonEntryFields = {
-  name: z.string().min(1).max(200),
+  // `.trim()` runs before `.min(1)`, so a whitespace-only name (e.g. "   ")
+  // is rejected exactly like an empty string — a name that is visually
+  // blank must not be accepted as valid (02-02-PLAN.md Task 1, edge case 8).
+  name: z.string().trim().min(1).max(200),
   folderId: z.string().nullable().optional(),
   notes: z.string().max(10000).nullable().optional(),
   tags: z.array(z.string().min(1).max(50)).optional(),
@@ -73,6 +76,19 @@ export const entryCreateSchema = z.discriminatedUnion("type", [
 ]);
 
 export type EntryCreateInput = z.infer<typeof entryCreateSchema>;
+
+/**
+ * Full-representation update contract (02-02-PLAN.md Task 1): the client
+ * always submits every mutable field on PATCH, so this mirrors
+ * `entryCreateSchema` exactly rather than making every field optional for a
+ * partial-merge semantics that has no caller. `updateEntry` in `entries.ts`
+ * is the one place that additionally enforces the immutable-type rule
+ * (stored `type` must match `input.type`) — this schema only validates
+ * shape, not identity against an existing row.
+ */
+export const entryUpdateSchema = entryCreateSchema;
+
+export type EntryUpdateInput = z.infer<typeof entryUpdateSchema>;
 
 export type EntryPayload =
   | z.infer<typeof apiKeyPayloadSchema>

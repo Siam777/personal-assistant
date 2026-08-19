@@ -17,8 +17,15 @@ import { Router } from "express";
 import type { z } from "zod";
 import { validate } from "../../middleware/validate.js";
 import { requireUnlocked } from "../../middleware/requireUnlocked.js";
-import { createEntry, listEntries } from "./entries.js";
-import { entryCreateSchema } from "./schemas.js";
+import {
+  createEntry,
+  EntryTypeImmutableError,
+  getEntry,
+  listEntries,
+  softDeleteEntry,
+  updateEntry,
+} from "./entries.js";
+import { entryCreateSchema, entryUpdateSchema } from "./schemas.js";
 
 export const entriesRouter = Router();
 
@@ -40,6 +47,58 @@ entriesRouter.post("/entries", validate(entryCreateSchema), (req, res, next) => 
     try {
       const created = await createEntry(req.body as z.infer<typeof entryCreateSchema>);
       res.status(201).json(created);
+    } catch (err) {
+      next(err);
+    }
+  })();
+});
+
+entriesRouter.get("/entries/:id", (req, res, next) => {
+  void (async () => {
+    try {
+      const entry = await getEntry(req.params.id as string);
+      if (!entry) {
+        res.status(404).json({ error: "Entry not found" });
+        return;
+      }
+      res.json(entry);
+    } catch (err) {
+      next(err);
+    }
+  })();
+});
+
+entriesRouter.patch("/entries/:id", validate(entryUpdateSchema), (req, res, next) => {
+  void (async () => {
+    try {
+      const updated = await updateEntry(
+        req.params.id as string,
+        req.body as z.infer<typeof entryUpdateSchema>
+      );
+      if (!updated) {
+        res.status(404).json({ error: "Entry not found" });
+        return;
+      }
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof EntryTypeImmutableError) {
+        res.status(400).json({ error: "Entry type cannot be changed" });
+        return;
+      }
+      next(err);
+    }
+  })();
+});
+
+entriesRouter.delete("/entries/:id", (req, res, next) => {
+  void (async () => {
+    try {
+      const deleted = await softDeleteEntry(req.params.id as string);
+      if (!deleted) {
+        res.status(404).json({ error: "Entry not found" });
+        return;
+      }
+      res.status(204).end();
     } catch (err) {
       next(err);
     }
