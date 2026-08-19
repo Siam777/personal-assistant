@@ -62,6 +62,16 @@ export const IDLE_TIMEOUT_MS = 5 * 60_000;
 export const MIN_PASSWORD_SCORE = 3;
 
 /**
+ * D-04: soft-deleted entries are recoverable from trash for this many days
+ * before `purgeExpiredTrash` removes them permanently on the next vault
+ * open. This is the single source of truth for the retention window — the
+ * trash empty-state copy ("Deleted entries are kept for 30 days...") and
+ * every retention-cutoff computation read this constant rather than
+ * repeating the number.
+ */
+export const TRASH_RETENTION_DAYS = 30;
+
+/**
  * Calibrated Argon2id cost parameters, measured via `npm run bench:kdf` on
  * the real target machine (research assumption A6).
  *

@@ -22,6 +22,7 @@ import EntryForm from "./EntryForm";
 import FolderSidebar from "./FolderSidebar";
 import SearchBar from "./SearchBar";
 import TagFilter from "./TagFilter";
+import TrashView from "./TrashView";
 
 const ENTRY_TYPE_ICONS: Record<EntrySummary["type"], typeof KeyRound> = {
   api_key: KeyRound,
@@ -76,6 +77,7 @@ export default function EntryListScreen() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewingTrash, setViewingTrash] = useState(false);
 
   const [query, setQuery] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -177,8 +179,12 @@ export default function EntryListScreen() {
 
   // The truly-empty vault (no entries anywhere, no filter applied) keeps
   // the full-page empty state from 02-01 rather than the sidebar/search
-  // layout — there is nothing yet to organize or search across.
-  if (list.length === 0 && !hasActiveFilter) {
+  // layout — there is nothing yet to organize or search across. A vault can
+  // still have trashed entries in this state (the user deleted everything
+  // that was ever created), so "View trash" stays reachable here too;
+  // selecting it falls through to the full sidebar/content layout below
+  // rather than duplicating TrashView's rendering in this branch.
+  if (list.length === 0 && !hasActiveFilter && !viewingTrash) {
     return (
       <Dialog
         open={dialogOpen}
@@ -192,7 +198,16 @@ export default function EntryListScreen() {
           <p className="text-base text-muted-foreground">
             Add your first API key, login, note, or card to get started.
           </p>
-          {newEntryButton}
+          <div className="flex items-center gap-4">
+            {newEntryButton}
+            <button
+              type="button"
+              onClick={() => setViewingTrash(true)}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              View trash
+            </button>
+          </div>
         </div>
         <DialogContent>
           <EntryForm key={editingEntry?.id ?? "create"} entry={editingEntry ?? undefined} onSaved={handleSaved} />
@@ -210,105 +225,129 @@ export default function EntryListScreen() {
       }}
     >
       <div className="flex gap-8">
-        <FolderSidebar
-          selectedFolderId={selectedFolderId}
-          onSelect={setSelectedFolderId}
-          onFoldersChanged={refetch}
-        />
+        <div className="flex flex-col gap-3">
+          <FolderSidebar
+            selectedFolderId={selectedFolderId}
+            onSelect={setSelectedFolderId}
+            onFoldersChanged={refetch}
+          />
+          <button
+            type="button"
+            onClick={() => setViewingTrash(true)}
+            className="px-2 py-1.5 text-left text-sm font-semibold text-primary hover:underline"
+          >
+            View trash
+          </button>
+        </div>
 
         <div className="flex flex-1 flex-col gap-8">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-[20px] leading-[1.3] font-semibold">Vault</h2>
-              {newEntryButton}
-            </div>
-
-            <SearchBar value={query} onChange={setQuery} searching={loading} />
-
-            {loadError && (
-              <p className="text-sm text-destructive">{SEARCH_FAILURE_MESSAGE}</p>
-            )}
-
-            <TagFilter key={tagsVersion} activeTag={activeTag} onSelect={setActiveTag} />
-
-            {list.length > 0 &&
-              (hasQuery ? (
-                <span className="text-sm font-semibold text-muted-foreground">
-                  {list.length} results for "{query}"
-                </span>
-              ) : (
-                list.length > 1 && (
-                  <span className="text-sm font-semibold text-muted-foreground">{list.length} entries</span>
-                )
-              ))}
-          </div>
-
-          {loading ? (
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : list.length === 0 ? (
-            <div className="flex flex-col items-start gap-3 py-16">
-              <h2 className="text-[28px] leading-[1.2] font-semibold">No matches</h2>
-              <p className="text-base text-muted-foreground">
-                No entries match "{query}". Try a different search term or clear your filters.
-              </p>
-              <Button type="button" variant="outline" onClick={handleClearFilters}>
-                Clear filters
-              </Button>
-            </div>
+          {viewingTrash ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setViewingTrash(false)}
+                className="self-start text-sm font-semibold text-primary hover:underline"
+              >
+                Back to vault
+              </button>
+              <TrashView onRestored={refetch} />
+            </>
           ) : (
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
-              <div className="flex flex-1 flex-col gap-3">
-                {list.map((entry) => {
-                  const Icon = ENTRY_TYPE_ICONS[entry.type];
-                  const isSelected = entry.id === selectedId;
-                  const visibleTags = entry.tags.slice(0, MAX_VISIBLE_TAGS);
-                  const extraTagCount = entry.tags.length - visibleTags.length;
+            <>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-[20px] leading-[1.3] font-semibold">Vault</h2>
+                  {newEntryButton}
+                </div>
 
-                  return (
-                    <Card
-                      key={entry.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedId(entry.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setSelectedId(entry.id);
-                        }
-                      }}
-                      className={`flex-row items-center gap-3 px-4 ${isSelected ? "ring-2 ring-ring" : ""}`}
-                    >
-                      <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                      <div className="flex flex-1 flex-col gap-1">
-                        <span className="text-base font-normal">{renderHighlightedName(entry.name, query)}</span>
-                        <span className="text-sm font-semibold text-muted-foreground">
-                          {formatRelativeUpdatedAt(entry.updatedAt)}
-                        </span>
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Badge variant="outline">{entry.folderName ?? "Uncategorized"}</Badge>
-                          {visibleTags.map((tag) => (
-                            <Badge key={tag} variant="secondary">
-                              {tag}
-                            </Badge>
-                          ))}
-                          {extraTagCount > 0 && <Badge variant="secondary">+{extraTagCount}</Badge>}
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
+                <SearchBar value={query} onChange={setQuery} searching={loading} />
+
+                {loadError && (
+                  <p className="text-sm text-destructive">{SEARCH_FAILURE_MESSAGE}</p>
+                )}
+
+                <TagFilter key={tagsVersion} activeTag={activeTag} onSelect={setActiveTag} />
+
+                {list.length > 0 &&
+                  (hasQuery ? (
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {list.length} results for "{query}"
+                    </span>
+                  ) : (
+                    list.length > 1 && (
+                      <span className="text-sm font-semibold text-muted-foreground">{list.length} entries</span>
+                    )
+                  ))}
               </div>
 
-              {selectedId && (
-                <div className="flex-1 rounded-xl bg-card p-6 ring-1 ring-foreground/10 md:max-w-md">
-                  <EntryDetail entryId={selectedId} onEdit={handleEdit} onDeleted={handleDeleted} />
+              {loading ? (
+                <div className="flex flex-col gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : list.length === 0 ? (
+                <div className="flex flex-col items-start gap-3 py-16">
+                  <h2 className="text-[28px] leading-[1.2] font-semibold">No matches</h2>
+                  <p className="text-base text-muted-foreground">
+                    No entries match "{query}". Try a different search term or clear your filters.
+                  </p>
+                  <Button type="button" variant="outline" onClick={handleClearFilters}>
+                    Clear filters
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
+                  <div className="flex flex-1 flex-col gap-3">
+                    {list.map((entry) => {
+                      const Icon = ENTRY_TYPE_ICONS[entry.type];
+                      const isSelected = entry.id === selectedId;
+                      const visibleTags = entry.tags.slice(0, MAX_VISIBLE_TAGS);
+                      const extraTagCount = entry.tags.length - visibleTags.length;
+
+                      return (
+                        <Card
+                          key={entry.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedId(entry.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedId(entry.id);
+                            }
+                          }}
+                          className={`flex-row items-center gap-3 px-4 ${isSelected ? "ring-2 ring-ring" : ""}`}
+                        >
+                          <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                          <div className="flex flex-1 flex-col gap-1">
+                            <span className="text-base font-normal">{renderHighlightedName(entry.name, query)}</span>
+                            <span className="text-sm font-semibold text-muted-foreground">
+                              {formatRelativeUpdatedAt(entry.updatedAt)}
+                            </span>
+                            <div className="flex flex-wrap items-center gap-1">
+                              <Badge variant="outline">{entry.folderName ?? "Uncategorized"}</Badge>
+                              {visibleTags.map((tag) => (
+                                <Badge key={tag} variant="secondary">
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {extraTagCount > 0 && <Badge variant="secondary">+{extraTagCount}</Badge>}
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {selectedId && (
+                    <div className="flex-1 rounded-xl bg-card p-6 ring-1 ring-foreground/10 md:max-w-md">
+                      <EntryDetail entryId={selectedId} onEdit={handleEdit} onDeleted={handleDeleted} />
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </div>

@@ -16,7 +16,9 @@
 import type { Kysely } from "kysely";
 import { initSchema } from "../db/connection.js";
 import type { VaultDbSchema } from "../db/schema.js";
+import { purgeExpiredTrash } from "./entries.js";
 
 export async function onVaultOpened(db: Kysely<VaultDbSchema>): Promise<void> {
   await initSchema(db);
+  await purgeExpiredTrash(db);
 }

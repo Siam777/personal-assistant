@@ -239,6 +239,8 @@ export interface EntrySummary {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  /** Null for a live entry; set the moment an entry moves to trash, and the basis for the trash view's days-remaining chip. */
+  deletedAt: string | null;
 }
 
 export interface Entry {
@@ -331,6 +333,45 @@ export async function deleteEntry(id: string): Promise<void> {
     throw new ApiError(res.status, await parseErrorMessage(res));
   }
 }
+
+// --- Trash (Phase 2 Plan 4) ------------------------------------------------
+
+/** Requires an unlocked session. Trashed entries only — `deletedAt` on each is what the days-remaining chip is computed from. */
+export function listTrash(): Promise<EntrySummary[]> {
+  return listEntries({ deleted: true });
+}
+
+/** Requires an unlocked session. 404s (via `ApiError`) when the id is absent or not currently trashed. */
+export function restoreEntry(id: string): Promise<Entry> {
+  return postJson<Entry>(`/api/vault/entries/${id}/restore`, {});
+}
+
+/**
+ * Requires an unlocked session. Permanently erases the entry and its tag
+ * links — unlike `deleteEntry`, this is not reversible. 404s when the id
+ * is absent or not currently trashed. The response body is empty on
+ * success (204), so this does not go through `postJson`.
+ */
+export async function permanentlyDeleteEntry(id: string): Promise<void> {
+  const res = await fetch(`/api/vault/entries/${id}/permanent`, { method: "DELETE" });
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+}
+
+/** Requires an unlocked session. Permanently erases every currently-trashed entry; the response carries the number removed. */
+export function emptyTrash(): Promise<{ removed: number }> {
+  return postJson<{ removed: number }>("/api/vault/entries/trash/empty", {});
+}
+
+/**
+ * Mirrors `server/src/config.ts`'s `TRASH_RETENTION_DAYS` (currently 30).
+ * The single client-side source of truth for the retention window, so the
+ * trash empty-state copy and the days-remaining chip can never drift from
+ * each other even though there is no runtime call across the boundary to
+ * read the server's actual value.
+ */
+export const TRASH_RETENTION_DAYS = 30;
 
 // --- Folders & tags (Phase 2 Plan 3) --------------------------------------
 

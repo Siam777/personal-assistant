@@ -19,9 +19,12 @@ import { validate } from "../../middleware/validate.js";
 import { requireUnlocked } from "../../middleware/requireUnlocked.js";
 import {
   createEntry,
+  emptyTrash,
   EntryTypeImmutableError,
   getEntry,
   listEntries,
+  permanentlyDeleteEntry,
+  restoreEntry,
   softDeleteEntry,
   updateEntry,
 } from "./entries.js";
@@ -61,6 +64,49 @@ entriesRouter.post("/entries", validate(entryCreateSchema), (req, res, next) => 
     try {
       const created = await createEntry(req.body as z.infer<typeof entryCreateSchema>);
       res.status(201).json(created);
+    } catch (err) {
+      next(err);
+    }
+  })();
+});
+
+// Defined before any parameterized POST /entries/:id/... route below, so
+// the literal "trash" segment is never captured as an :id value.
+entriesRouter.post("/entries/trash/empty", (_req, res, next) => {
+  void (async () => {
+    try {
+      const removed = await emptyTrash();
+      res.json({ removed });
+    } catch (err) {
+      next(err);
+    }
+  })();
+});
+
+entriesRouter.post("/entries/:id/restore", (req, res, next) => {
+  void (async () => {
+    try {
+      const restored = await restoreEntry(req.params.id as string);
+      if (!restored) {
+        res.status(404).json({ error: "Entry not found" });
+        return;
+      }
+      res.json(restored);
+    } catch (err) {
+      next(err);
+    }
+  })();
+});
+
+entriesRouter.delete("/entries/:id/permanent", (req, res, next) => {
+  void (async () => {
+    try {
+      const deleted = await permanentlyDeleteEntry(req.params.id as string);
+      if (!deleted) {
+        res.status(404).json({ error: "Entry not found" });
+        return;
+      }
+      res.status(204).end();
     } catch (err) {
       next(err);
     }
