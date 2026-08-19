@@ -27,10 +27,12 @@ import {
 } from "../../lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PasswordGenerator from "./PasswordGenerator";
 
 // Radix Select requires non-empty string item values, so "no folder" is
 // represented by this sentinel on the wire between this form and the
@@ -56,24 +58,29 @@ interface FieldConfig {
   required: boolean;
   mono?: boolean;
   textarea?: boolean;
+  /** Renders the PasswordGenerator addon on this field — only ever the fields that accept a generated secret (VAULT-05). */
+  generator?: boolean;
 }
 
 const TYPE_FIELDS: Record<EntryType, FieldConfig[]> = {
   api_key: [
-    { key: "key", label: "Key", required: true, mono: true },
+    // `key` renders its own PasswordGenerator addon (VAULT-05) for generating a strong key value.
+    { key: "key", label: "Key", required: true, mono: true, generator: true },
     { key: "endpoint", label: "Endpoint", required: false },
     { key: "model", label: "Model", required: false },
   ],
   login: [
     { key: "username", label: "Username", required: true },
-    { key: "password", label: "Password", required: true, mono: true },
+    // `password` renders its own PasswordGenerator addon (VAULT-05).
+    { key: "password", label: "Password", required: true, mono: true, generator: true },
     { key: "url", label: "URL", required: false },
   ],
   note: [{ key: "body", label: "Body", required: false, textarea: true }],
   card: [
-    { key: "number", label: "Card number", required: true, mono: true },
+    // `number` and `cvv` each render their own independent PasswordGenerator addon (VAULT-05).
+    { key: "number", label: "Card number", required: true, mono: true, generator: true },
     { key: "expiry", label: "Expiry", required: true },
-    { key: "cvv", label: "CVV", required: true },
+    { key: "cvv", label: "CVV", required: true, mono: true, generator: true },
     { key: "cardholder", label: "Cardholder name", required: false },
   ],
 };
@@ -392,6 +399,28 @@ export default function EntryForm({ onSaved, entry, initialType }: EntryFormProp
                 className="max-h-40 overflow-y-auto"
                 aria-invalid={Boolean(errors[cfg.key])}
               />
+            ) : cfg.generator ? (
+              <InputGroup>
+                <InputGroupInput
+                  id={`entry-${cfg.key}`}
+                  value={fields[cfg.key] ?? ""}
+                  onChange={(event) =>
+                    setFields((current) => ({ ...current, [cfg.key]: event.target.value }))
+                  }
+                  onBlur={handleFieldBlur(cfg)}
+                  readOnly={submitting}
+                  disabled={submitting}
+                  className={cfg.mono ? "font-mono" : undefined}
+                  aria-invalid={Boolean(errors[cfg.key])}
+                />
+                <InputGroupAddon align="inline-end">
+                  <PasswordGenerator
+                    onUse={(generated) =>
+                      setFields((current) => ({ ...current, [cfg.key]: generated }))
+                    }
+                  />
+                </InputGroupAddon>
+              </InputGroup>
             ) : (
               <Input
                 id={`entry-${cfg.key}`}
