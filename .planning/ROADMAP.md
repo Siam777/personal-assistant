@@ -13,7 +13,7 @@ This roadmap delivers a local-first, "industry grade" encrypted vault plus a Goo
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Secure Vault Setup & Unlock** - Master password, envelope encryption, optional TOTP 2FA, and true session auto-lock
+- [x] **Phase 1: Secure Vault Setup & Unlock** - Master password, envelope encryption, optional TOTP 2FA, and true session auto-lock (completed 2026-08-19)
 - [ ] **Phase 2: Vault Core — Entries, Organization & Search** - Create/organize/find every entry type (API keys, logins, notes, cards)
 - [ ] **Phase 3: Trust, Backup & Recovery** - Leak-resistant clipboard copy, access audit log, encrypted backup/restore
 - [ ] **Phase 4: OCR Lens Module** - Upload/drag and live-camera text extraction with editable preview and one-tap copy
@@ -54,7 +54,7 @@ Plans:
 
 **Wave 5** *(gap closure — UAT gap G-01-31)*
 
-- [ ] 01-05-PLAN.md — Clean Ctrl-C shutdown of the dev stack on Windows, with an automated reap harness
+- [x] 01-05-PLAN.md — Clean Ctrl-C shutdown of the dev stack on Windows, with an automated reap harness
 
 ### Phase 2: Vault Core — Entries, Organization & Search
 
@@ -113,7 +113,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Vault Setup & Unlock | 4/4 | In Progress|  |
+| 1. Secure Vault Setup & Unlock | 5/5 | Complete    | 2026-08-19 |
 | 2. Vault Core — Entries, Organization & Search | 0/TBD | Not started | - |
 | 3. Trust, Backup & Recovery | 0/TBD | Not started | - |
 | 4. OCR Lens Module | 0/TBD | Not started | - |

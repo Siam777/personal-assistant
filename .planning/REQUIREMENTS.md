@@ -10,7 +10,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Security & Unlock
 
 - [x] **SEC-01**: User can set a master password that derives the vault's encryption key (Argon2id KDF + AES-256-GCM envelope encryption)
-- [ ] **SEC-02**: User can unlock the vault by entering the correct master password
+- [x] **SEC-02**: User can unlock the vault by entering the correct master password
 - [x] **SEC-03**: User can enable optional TOTP-based 2FA on top of the master password
 - [x] **SEC-04**: Vault automatically locks after a period of inactivity, destroying the in-memory session key (not just hiding the UI)
 - [x] **SEC-05**: No plaintext secret, derived key, or master password is ever written to disk, logs, or localStorage/sessionStorage
@@ -88,7 +88,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SEC-01 | Phase 1 | Complete |
-| SEC-02 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 1 | Complete |
 | SEC-05 | Phase 1 | Complete |
