@@ -157,6 +157,10 @@ const initialBuild = spawnSync(buildSpec.cmd, buildSpec.args, {
   ...buildSpec.options,
   stdio: "inherit",
 });
+if (initialBuild.error) {
+  process.stderr.write(`[build] failed to launch initial compile: ${initialBuild.error.message}\n`);
+  process.exit(1);
+}
 if (initialBuild.status !== 0) {
   process.stderr.write("[build] initial server compile failed — see output above\n");
   process.exit(initialBuild.status ?? 1);
@@ -186,6 +190,20 @@ for (const spec of specs) {
       shutdownAll(`${spec.name} exited`).then(() => {
         process.exitCode = code ?? 1;
         process.exit(process.exitCode);
+      });
+    }
+  });
+  // Without this, a spawn failure (ENOENT/EACCES/resource exhaustion) on
+  // any child emits an unhandled "error" event and throws, killing dev.mjs
+  // before shutdownAll ever runs and orphaning whichever siblings already
+  // started — the same class of leak this script exists to prevent, just
+  // triggered by a spawn failure instead of Ctrl-C.
+  child.on("error", (err) => {
+    if (!shuttingDown) {
+      process.stderr.write(`[${spec.name}] failed to start: ${err.message}\n`);
+      shutdownAll(`${spec.name} failed to start`).then(() => {
+        process.exitCode = 1;
+        process.exit(1);
       });
     }
   });
