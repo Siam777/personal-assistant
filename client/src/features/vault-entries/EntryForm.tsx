@@ -14,20 +14,29 @@
  * validation library.
  */
 
-import { useEffect, useRef, useState, type FocusEvent, type FormEvent } from "react";
-import { KeyRound, LogIn, StickyNote, CreditCard } from "lucide-react";
+import { useEffect, useRef, useState, type FocusEvent, type FormEvent, type KeyboardEvent } from "react";
+import { KeyRound, LogIn, StickyNote, CreditCard, X } from "lucide-react";
 import {
   createEntry,
+  listFolders,
   updateEntry,
   type Entry,
   type EntryPayload,
   type EntryType,
+  type Folder,
 } from "../../lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Radix Select requires non-empty string item values, so "no folder" is
+// represented by this sentinel on the wire between this form and the
+// Select primitive, then translated to/from `folderId: null` at the
+// state/submit boundary.
+const UNCATEGORIZED_VALUE = "uncategorized";
 
 interface EntryFormProps {
   onSaved: (entry: Entry) => void;
@@ -137,6 +146,10 @@ export default function EntryForm({ onSaved, entry, initialType }: EntryFormProp
   const [name, setName] = useState(entry?.name ?? "");
   const [notes, setNotes] = useState(entry?.notes ?? "");
   const [fields, setFields] = useState<Record<string, string>>(() => initialFieldsFor(entry));
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folderId, setFolderId] = useState<string>(entry?.folderId ?? UNCATEGORIZED_VALUE);
+  const [tags, setTags] = useState<string[]>(entry?.tags ?? []);
+  const [tagDraft, setTagDraft] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [serverMessage, setServerMessage] = useState<string | null>(null);
@@ -149,6 +162,42 @@ export default function EntryForm({ onSaved, entry, initialType }: EntryFormProp
   useEffect(() => {
     if (step === "fields") nameInputRef.current?.focus();
   }, [step]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listFolders()
+      .then((result) => {
+        if (!cancelled) setFolders(result);
+      })
+      .catch(() => {
+        // Fails soft: the select still offers "Uncategorized" even if the
+        // rest of the folder list couldn't be fetched — a missing folder
+        // list must never block creating or editing an entry.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function commitTagDraft(): void {
+    const value = tagDraft.trim();
+    if (value.length === 0) return;
+    setTags((current) => (current.includes(value) ? current : [...current, value]));
+    setTagDraft("");
+  }
+
+  function handleTagKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      commitTagDraft();
+    } else if (event.key === "Backspace" && tagDraft.length === 0 && tags.length > 0) {
+      setTags((current) => current.slice(0, -1));
+    }
+  }
+
+  function removeTag(tag: string): void {
+    setTags((current) => current.filter((existing) => existing !== tag));
+  }
 
   function handleSelectType(selected: EntryType): void {
     setType(selected);
@@ -195,7 +244,9 @@ export default function EntryForm({ onSaved, entry, initialType }: EntryFormProp
       const input = {
         type,
         name,
+        folderId: folderId === UNCATEGORIZED_VALUE ? null : folderId,
         notes: notes.trim().length > 0 ? notes : null,
+        tags,
         payload: buildPayload(type, fields),
       };
       const saved = isEditMode ? await updateEntry(entry.id, input) : await createEntry(input);
@@ -272,6 +323,57 @@ export default function EntryForm({ onSaved, entry, initialType }: EntryFormProp
               {errors.name}
             </p>
           )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="entry-folder">Folder</Label>
+          <Select value={folderId} onValueChange={setFolderId} disabled={submitting}>
+            <SelectTrigger id="entry-folder" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={UNCATEGORIZED_VALUE}>Uncategorized</SelectItem>
+              {folders.map((folder) => (
+                <SelectItem key={folder.id} value={folder.id}>
+                  {folder.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="entry-tags">Tags</Label>
+          <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-input px-2 py-1">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="flex items-center gap-1 rounded-full bg-muted pl-2.5 text-sm font-semibold"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  disabled={submitting}
+                  aria-label={`Remove ${tag}`}
+                  className="flex size-11 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+            <input
+              id="entry-tags"
+              value={tagDraft}
+              onChange={(event) => setTagDraft(event.target.value)}
+              onKeyDown={handleTagKeyDown}
+              onBlur={commitTagDraft}
+              readOnly={submitting}
+              disabled={submitting}
+              placeholder={tags.length === 0 ? "Add a tag" : undefined}
+              className="min-w-24 flex-1 border-0 bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50"
+            />
+          </div>
         </div>
 
         {TYPE_FIELDS[activeType].map((cfg) => (

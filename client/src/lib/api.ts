@@ -226,13 +226,17 @@ export type EntryPayload = ApiKeyPayload | LoginPayload | NotePayload | CardPayl
 /**
  * Returned by `GET /api/vault/entries`. Deliberately carries no `payload`
  * and no `notes` property — the list endpoint never returns a decrypted
- * secret value, only the entry a user explicitly opens does.
+ * secret value, only the entry a user explicitly opens does. `folderName`
+ * is the joined folder's name (null when uncategorized); `tags` is the
+ * entry's tag names.
  */
 export interface EntrySummary {
   id: string;
   type: EntryType;
   name: string;
   folderId: string | null;
+  folderName: string | null;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -242,6 +246,7 @@ export interface Entry {
   type: EntryType;
   name: string;
   folderId: string | null;
+  tags: string[];
   payload: EntryPayload;
   notes: string | null;
   createdAt: string;
@@ -258,9 +263,24 @@ export interface EntryCreateInput {
   payload: EntryPayload;
 }
 
-/** Requires an unlocked session. Non-deleted entries only. */
-export async function listEntries(): Promise<EntrySummary[]> {
-  const res = await fetch("/api/vault/entries");
+/** Params for `listEntries` — a blank/undefined `q`, `folderId`, or `tag` is omitted from the request entirely rather than sent as an empty query param. */
+export interface EntryListParams {
+  q?: string;
+  folderId?: string | null;
+  tag?: string | null;
+  deleted?: boolean;
+}
+
+/** Requires an unlocked session. Non-deleted entries only (unless `params.deleted` is true). */
+export async function listEntries(params: EntryListParams = {}): Promise<EntrySummary[]> {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.folderId) search.set("folderId", params.folderId);
+  if (params.tag) search.set("tag", params.tag);
+  if (params.deleted) search.set("deleted", "true");
+  const query = search.toString();
+
+  const res = await fetch(`/api/vault/entries${query ? `?${query}` : ""}`);
   if (!res.ok) {
     throw new ApiError(res.status, await parseErrorMessage(res));
   }
@@ -310,4 +330,67 @@ export async function deleteEntry(id: string): Promise<void> {
   if (!res.ok) {
     throw new ApiError(res.status, await parseErrorMessage(res));
   }
+}
+
+// --- Folders & tags (Phase 2 Plan 3) --------------------------------------
+
+export interface Folder {
+  id: string;
+  name: string;
+  createdAt: string;
+  entryCount: number;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  entryCount: number;
+}
+
+/** Requires an unlocked session. */
+export async function listFolders(): Promise<Folder[]> {
+  const res = await fetch("/api/vault/folders");
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  return (await res.json()) as Folder[];
+}
+
+/** Requires an unlocked session. 409s (via `ApiError`) when the name already exists. */
+export function createFolder(name: string): Promise<Folder> {
+  return postJson<Folder>("/api/vault/folders", { name });
+}
+
+/** Requires an unlocked session. 404s and 409s surface as `ApiError`. */
+export async function renameFolder(id: string, name: string): Promise<Folder> {
+  const res = await fetch(`/api/vault/folders/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  return (await res.json()) as Folder;
+}
+
+/**
+ * Requires an unlocked session. Deletes the folder and uncategorizes its
+ * entries — never deletes them. The response body is empty on success
+ * (204), so this does not go through `postJson`.
+ */
+export async function deleteFolder(id: string): Promise<void> {
+  const res = await fetch(`/api/vault/folders/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+}
+
+/** Requires an unlocked session. */
+export async function listTags(): Promise<Tag[]> {
+  const res = await fetch("/api/vault/tags");
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  return (await res.json()) as Tag[];
 }

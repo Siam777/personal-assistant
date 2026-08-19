@@ -65,24 +65,15 @@ export default function EntryListScreen() {
     };
   }, [retryToken]);
 
-  function handleSaved(entry: Entry): void {
-    const summary: EntrySummary = {
-      id: entry.id,
-      type: entry.type,
-      name: entry.name,
-      folderId: entry.folderId,
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-    };
-    setEntries((current) => {
-      if (!current) return [summary];
-      const exists = current.some((e) => e.id === summary.id);
-      return exists
-        ? current.map((e) => (e.id === summary.id ? summary : e))
-        : [summary, ...current];
-    });
+  // A saved entry's `folderName` and `tags` are server-joined/resolved
+  // values (folder name lookup, tag create-on-the-fly resolution) that the
+  // client cannot correctly synthesize from the `Entry` DTO alone, so a
+  // save now triggers a refetch through the same effect the Retry button
+  // uses, rather than splicing a hand-built summary into local state.
+  function handleSaved(): void {
     setDialogOpen(false);
     setEditingEntry(null);
+    setRetryToken((n) => n + 1);
   }
 
   function handleEdit(entry: Entry): void {
