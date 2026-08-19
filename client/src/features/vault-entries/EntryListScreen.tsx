@@ -11,13 +11,7 @@ import { KeyRound } from "lucide-react";
 import { listEntries, type Entry, type EntrySummary } from "../../lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import EntryForm from "./EntryForm";
 
 const ENTRY_TYPE_ICONS: Record<EntrySummary["type"], typeof KeyRound> = {
@@ -132,9 +126,6 @@ export default function EntryListScreen() {
       )}
 
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New API key entry</DialogTitle>
-        </DialogHeader>
         <EntryForm onSaved={handleSaved} />
       </DialogContent>
     </Dialog>

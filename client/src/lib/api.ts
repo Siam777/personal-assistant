@@ -271,3 +271,43 @@ export async function listEntries(): Promise<EntrySummary[]> {
 export function createEntry(input: EntryCreateInput): Promise<Entry> {
   return postJson<Entry>("/api/vault/entries", input);
 }
+
+/** Requires an unlocked session. The only client call that returns a decrypted secret payload. 404s surface as `ApiError`. */
+export async function getEntry(id: string): Promise<Entry> {
+  const res = await fetch(`/api/vault/entries/${id}`);
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  return (await res.json()) as Entry;
+}
+
+/**
+ * Requires an unlocked session. Full-representation update — submit every
+ * mutable field, not a partial patch. The server rejects a body whose
+ * `type` differs from the stored entry's type with 400 (entry type is
+ * immutable after creation).
+ */
+export async function updateEntry(id: string, input: EntryCreateInput): Promise<Entry> {
+  const res = await fetch(`/api/vault/entries/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  return (await res.json()) as Entry;
+}
+
+/**
+ * Requires an unlocked session. Moves the entry to trash (soft delete, not
+ * a hard delete). The response body is empty on success (204), so this
+ * does not go through `postJson`, which always parses a JSON body — same
+ * precedent as `disableTwoFactor`.
+ */
+export async function deleteEntry(id: string): Promise<void> {
+  const res = await fetch(`/api/vault/entries/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+}
