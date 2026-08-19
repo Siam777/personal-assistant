@@ -5,6 +5,7 @@ import InitScreen from "./features/vault-unlock/InitScreen";
 import UnlockScreen from "./features/vault-unlock/UnlockScreen";
 import LockedNotice from "./features/vault-unlock/LockedNotice";
 import TwoFactorSettings from "./features/vault-2fa/TwoFactorSettings";
+import EntryListScreen from "./features/vault-entries/EntryListScreen";
 
 /** The only two views reachable once the vault is unlocked. `settings` is
  * gated entirely by being nested inside the `status.unlocked` branch below —
@@ -121,7 +122,7 @@ export default function App() {
           </>
         ) : (
           <>
-            <p>Vault unlocked. (The real unlocked view lands in a later phase.)</p>
+            <EntryListScreen />
             <button type="button" onClick={() => setUnlockedView("settings")}>
               Two-factor authentication settings
             </button>

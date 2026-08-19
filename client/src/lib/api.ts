@@ -193,3 +193,81 @@ export function regenerateBackupCodes(masterPassword: string): Promise<Enrollmen
     masterPassword,
   });
 }
+
+// --- Vault entries (Phase 2) ---------------------------------------------
+
+export type EntryType = "api_key" | "login" | "note" | "card";
+
+export interface ApiKeyPayload {
+  key: string;
+  endpoint?: string;
+  model?: string;
+}
+
+export interface LoginPayload {
+  username: string;
+  password: string;
+  url?: string;
+}
+
+export interface NotePayload {
+  body: string;
+}
+
+export interface CardPayload {
+  number: string;
+  expiry: string;
+  cvv: string;
+  cardholder?: string;
+}
+
+export type EntryPayload = ApiKeyPayload | LoginPayload | NotePayload | CardPayload;
+
+/**
+ * Returned by `GET /api/vault/entries`. Deliberately carries no `payload`
+ * and no `notes` property — the list endpoint never returns a decrypted
+ * secret value, only the entry a user explicitly opens does.
+ */
+export interface EntrySummary {
+  id: string;
+  type: EntryType;
+  name: string;
+  folderId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Entry {
+  id: string;
+  type: EntryType;
+  name: string;
+  folderId: string | null;
+  payload: EntryPayload;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface EntryCreateInput {
+  type: EntryType;
+  name: string;
+  folderId?: string | null;
+  notes?: string | null;
+  tags?: string[];
+  payload: EntryPayload;
+}
+
+/** Requires an unlocked session. Non-deleted entries only. */
+export async function listEntries(): Promise<EntrySummary[]> {
+  const res = await fetch("/api/vault/entries");
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  return (await res.json()) as EntrySummary[];
+}
+
+/** Requires an unlocked session. Never dedupes — repeat calls with identical input create distinct rows. */
+export function createEntry(input: EntryCreateInput): Promise<Entry> {
+  return postJson<Entry>("/api/vault/entries", input);
+}

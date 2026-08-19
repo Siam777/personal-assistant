@@ -6,6 +6,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { requireSameOriginForMutations } from "./middleware/sameOrigin.js";
 import { logError, logInfo } from "./log.js";
 import { vaultRouter } from "./modules/auth/routes.js";
+import { entriesRouter } from "./modules/vault-entries/routes.js";
 
 /**
  * Configured Express app: a small-size-limited JSON body parser, a
@@ -21,6 +22,9 @@ export function createApp(): Express {
   app.use(requireSameOriginForMutations);
 
   app.use("/api/vault", vaultRouter);
+  // vaultRouter matches first, so /status, /init, /unlock, /lock, and
+  // /2fa/* never reach entriesRouter's requireUnlocked gate.
+  app.use("/api/vault", entriesRouter);
 
   app.use(errorHandler);
 
