@@ -70,7 +70,7 @@ Plans:
   4. User can organize entries into folders/categories and tag them, then filter the vault by tag.
   5. User can search across all vault entries by name or metadata and quickly find the entry they need.
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 **UI hint**: yes
 
 Plans:
@@ -80,7 +80,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Every entry type, full CRUD, and the masked detail view with 30-second auto re-mask
+- [x] 02-02-PLAN.md — Every entry type, full CRUD, and the masked detail view with 30-second auto re-mask
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -131,6 +131,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Secure Vault Setup & Unlock | 5/5 | Complete    | 2026-08-19 |
-| 2. Vault Core — Entries, Organization & Search | 1/4 | In Progress|  |
+| 2. Vault Core — Entries, Organization & Search | 2/4 | In Progress|  |
 | 3. Trust, Backup & Recovery | 0/TBD | Not started | - |
 | 4. OCR Lens Module | 0/TBD | Not started | - |

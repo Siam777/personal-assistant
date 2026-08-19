@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Vault Core — Entries, Organization & Search
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-08-19T19:38:48.900Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-08-19T22:00:03.468Z"
 last_activity: 2026-08-20
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-18)
 ## Current Position
 
 Phase: 02 (Vault Core — Entries, Organization & Search) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-20 — Phase 02 execution started
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [███████░░░] 67%
 |------|----------|-------|-------|
 | Phase 01 P05 | 95min | 3 tasks | 7 files |
 | Phase 02 P01 | 90min | 2 tasks | 16 files |
+| Phase 02 P02 | 70min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-01: Kept the discriminated-union entryCreateSchema covering all four entry types in this plan even though only api_key has a UI, to avoid a union rewrite in 02-02
 - [Phase ?]: 02-01: Raised server vitest testTimeout to 20s — the KDF-heavy auth/entries suite was flaking against the 5s default under worker-pool contention, not a logic defect
 - [Phase ?]: 02-01: Deferred the tracer's interactive UI human-check to end-of-phase UAT (workflow.human_verify_mode) rather than blocking indefinitely — sandboxed dev servers kept getting killed and the real vault's master password/TOTP are not available to the executor
+- [Phase ?]: 02-02: Aliased entryUpdateSchema directly to entryCreateSchema (identical discriminated-union shape) rather than redeclaring an equivalent schema, avoiding drift between create and update contracts
+- [Phase ?]: 02-02: Added .trim() to the entry name Zod field so a whitespace-only name is rejected 400, matching the plan's own required edge case that the pre-existing .min(1) alone did not satisfy
+- [Phase ?]: 02-02: EntryDetail masks only the field names REQUIREMENTS.md/UI-SPEC.md name explicitly as secret (api_key.key, login.password, note.body, card.number+cvv) behind an independent per-field 30s reveal timer
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T19:38:48.872Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-08-19T22:00:03.445Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

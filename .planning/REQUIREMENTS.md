@@ -17,10 +17,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Vault Entries
 
-- [ ] **VAULT-01**: User can create, view, edit, and delete API key entries (key + endpoint/model/notes)
-- [ ] **VAULT-02**: User can create, view, edit, and delete password/login entries (username + password + URL)
-- [ ] **VAULT-03**: User can create, view, edit, and delete secure note entries (freeform encrypted text)
-- [ ] **VAULT-04**: User can create, view, edit, and delete card entries (structured sensitive data)
+- [x] **VAULT-01**: User can create, view, edit, and delete API key entries (key + endpoint/model/notes)
+- [x] **VAULT-02**: User can create, view, edit, and delete password/login entries (username + password + URL)
+- [x] **VAULT-03**: User can create, view, edit, and delete secure note entries (freeform encrypted text)
+- [x] **VAULT-04**: User can create, view, edit, and delete card entries (structured sensitive data)
 - [ ] **VAULT-05**: User can generate a cryptographically strong random password when creating an entry
 
 ### Organization & Search
@@ -92,10 +92,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 1 | Complete |
 | SEC-05 | Phase 1 | Complete |
-| VAULT-01 | Phase 2 | Pending (create+view landed 02-01; edit+delete land 02-02) |
-| VAULT-02 | Phase 2 | Pending |
-| VAULT-03 | Phase 2 | Pending |
-| VAULT-04 | Phase 2 | Pending |
+| VAULT-01 | Phase 2 | Complete |
+| VAULT-02 | Phase 2 | Complete |
+| VAULT-03 | Phase 2 | Complete |
+| VAULT-04 | Phase 2 | Complete |
 | VAULT-05 | Phase 2 | Pending |
 | ORG-01 | Phase 2 | Pending |
 | ORG-02 | Phase 2 | Pending |
