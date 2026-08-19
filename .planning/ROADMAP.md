@@ -70,8 +70,25 @@ Plans:
   4. User can organize entries into folders/categories and tag them, then filter the vault by tag.
   5. User can search across all vault entries by name or metadata and quickly find the entry they need.
 
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Tracer: a user creates an API key entry and sees it in their vault (unified entries schema, gated router, create/list end to end)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Every entry type, full CRUD, and the masked detail view with 30-second auto re-mask
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — Flat folders, on-the-fly tags, and a search that never touches the encrypted payload
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-04-PLAN.md — Password generator, trash with 30-day retention, and bounded rendering across every collection surface
 
 ### Phase 3: Trust, Backup & Recovery
 
@@ -114,6 +131,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Secure Vault Setup & Unlock | 5/5 | Complete    | 2026-08-19 |
-| 2. Vault Core — Entries, Organization & Search | 0/TBD | Not started | - |
+| 2. Vault Core — Entries, Organization & Search | 0/4 | Planned      | - |
 | 3. Trust, Backup & Recovery | 0/TBD | Not started | - |
 | 4. OCR Lens Module | 0/TBD | Not started | - |
