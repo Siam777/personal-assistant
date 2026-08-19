@@ -19,7 +19,8 @@ import { requireUnlocked } from "../../middleware/requireUnlocked.js";
 import { validate } from "../../middleware/validate.js";
 import type { VaultMeta, VaultStatus } from "../../types.js";
 import type { VaultDbSchema } from "../db/schema.js";
-import { initSchema, openVaultDb } from "../db/connection.js";
+import { openVaultDb } from "../db/connection.js";
+import { onVaultOpened } from "../vault-entries/bootstrap.js";
 import { deriveMasterKey, generateVaultKey, unwrapKey, wrapKey } from "./crypto.js";
 import * as session from "./session.js";
 import {
@@ -117,7 +118,7 @@ vaultRouter.post("/init", validate(initBodySchema), (req, res, next) => {
       const wrappedVaultKey = wrapKey(vaultKey, masterKey);
 
       db = openVaultDb(config.VAULT_DB_PATH, vaultKey);
-      await initSchema(db);
+      await onVaultOpened(db);
 
       const row = await db
         .selectFrom("schema_version")
@@ -242,6 +243,7 @@ vaultRouter.post(
         // single generic failure.
         const vaultKey = unwrapKey(meta.wrappedVaultKey, masterKey);
         db = openVaultDb(config.VAULT_DB_PATH, vaultKey);
+        await onVaultOpened(db);
 
         // The master password is proven above by the auth-tag check inside
         // unwrapKey; the second factor is examined only after that

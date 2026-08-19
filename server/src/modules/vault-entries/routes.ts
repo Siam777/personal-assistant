@@ -6,10 +6,11 @@
  * without the gate (unlike `vaultRouter`, which has the one deliberate
  * `/status` exception).
  *
- * `vaultAuthError()` is never constructed here — that constructor is
- * reserved for the unlock oracle (`errorHandler.ts`); entry CRUD failures
- * fall through to the generic 500 or are answered explicitly with a status
- * plus an `{ error: string }` body.
+ * The unlock-oracle's tagged auth-error constructor in `errorHandler.ts`
+ * (reserved exclusively for the unlock path — see that file's doc comment)
+ * is never constructed here; entry CRUD failures fall through to the
+ * generic 500 or are answered explicitly with a status plus an
+ * `{ error: string }` body.
  */
 
 import { Router } from "express";
