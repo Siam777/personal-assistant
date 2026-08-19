@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 01-secure-vault-setup-unlock
-source: [01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md]
+source: [01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md]
 started: 2026-08-18T15:51:06Z
-updated: 2026-08-19T00:32:00Z
+updated: 2026-08-19T01:15:00Z
 ---
 
 ## Current Test
@@ -199,10 +199,13 @@ coverage_id: D10
 
 ### 31. npm run dev Ctrl-C shutdown (D6, 01-01)
 expected: Running `npm run dev` from an actual interactive terminal and pressing Ctrl-C once cleanly stops all three child processes (tsc, node --watch, vite) with no orphaned process left behind.
-result: issue
+result: pass
 reported: "Pressed Ctrl-C in PowerShell; a 'Terminate batch job (Y/N)?' prompt appeared and the 'y' keystroke was not consumed by it (PowerShell then tried to run 'y' as a command and errored: 'y is not recognized'). After that, Get-Process showed two node.exe processes (PIDs 5280, 36264) still running with no path/cmdline detail to confirm which script they belonged to."
 severity: major
 platform_note: "Windows PowerShell — 'Terminate batch job (Y/N)?' is the classic Windows console signal-relay prompt for a process tree spawned through a shell (concurrently/npm-run-all style). This is a known Windows-only failure mode where Ctrl-C does not propagate to the full child process tree unless the dev script explicitly handles it (e.g. tree-kill, detached process groups, or a signal-relay library)."
+resolution: "Fixed by gap closure plan 01-05: scripts/dev-spec.mjs resolves TypeScript/Vite entrypoints via their package.json bin fields (no Windows script shim in dev.mjs's own subtree); each child is spawned with detached:true on win32 only (own process group, immune to the console-wide Ctrl-C broadcast); killTree() is now async and awaited to completion (taskkill exit 128 = already gone = success) before dev.mjs exits; SIGBREAK handled alongside SIGINT/SIGTERM; a stdin control channel (q/stop) provides a deterministic non-console shutdown path exercised by the new npm run verify:dev-shutdown harness. Human re-verified all three rounds (npm run dev, node scripts/dev.mjs, q/Enter) in a real interactive PowerShell window: no batch-job prompt, no leftover node/tsc/esbuild process, both ports released. Commits 56ae0fe, adabaa3."
+verified_fix: true
+fixed_at: 2026-08-19
 
 ### 32. No-recovery warning + browser storage (D9, 01-02)
 expected: The no-recovery warning renders as an unmissable blocking panel with no way past it other than ticking the checkbox; the submit button stays disabled until both passwords match at sufficient strength and the box is ticked; a weak password shows readable feedback; the browser offers no "save password" prompt; and DevTools Application tab shows Local Storage and Session Storage staying empty for the origin throughout.
@@ -224,9 +227,9 @@ note: "User confirmed but flagged limited time to check every sub-case exhaustiv
 ## Summary
 
 total: 35
-passed: 34
+passed: 35
 issues: 1
-resolved_issues: 1
+resolved_issues: 2
 pending: 0
 skipped: 0
 
@@ -234,7 +237,7 @@ skipped: 0
 
 - gap_id: G-01-31
   truth: "npm run dev Ctrl-C once cleanly stops all three child processes (tsc, node --watch, vite) with no orphaned process left behind"
-  status: failed
+  status: resolved
   reason: "User reported: 'Terminate batch job (Y/N)?' prompt appeared on Ctrl-C, the y keystroke was not consumed by it, and two node.exe processes (PIDs 5280, 36264) remained running afterward per Get-Process"
   severity: major
   test: 31
@@ -249,6 +252,8 @@ skipped: 0
     - "Avoid the npm.cmd batch-file hop for tsc/vite children where possible (invoke their .js entrypoints via node directly) to eliminate nested cmd.exe 'Terminate batch job' interception points inside dev.mjs's own subtree."
     - "Document/consider `node scripts/dev.mjs` as the recommended direct invocation instead of `npm run dev`, since the outer npm.cmd layer is outside the script's control entirely."
   debug_session: ".planning/debug/npm-dev-ctrlc-orphan-processes.md"
+  resolved_by: "Plan 01-05 (commits 56ae0fe, adabaa3): scripts/dev-spec.mjs resolves TypeScript/Vite entrypoints via package.json bin fields (no script shim in dev.mjs's own subtree); children spawn with detached:true on win32 only (own process group); killTree() is async and awaited before dev.mjs exits (taskkill exit 128 treated as success); SIGBREAK handled; stdin q/stop control channel added; npm run verify:dev-shutdown proves the reap automatically. Human re-verified all three rounds (npm run dev, node scripts/dev.mjs, q/Enter) in a real interactive PowerShell window with a clean result."
+  resolved_at: 2026-08-19
 
 - gap_id: G-01-1
   truth: "Kill any running server/service, clear ephemeral state, start from scratch, server boots without errors, primary query returns live data"
