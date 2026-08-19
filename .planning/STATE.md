@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Secure Vault Setup & Unlock
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-08-18T19:01:05.694Z"
+stopped_at: Completed 01-05-PLAN.md — Phase 01 complete (35/35 UAT, gap G-01-31 closed)
+last_updated: "2026-08-19T07:15:13.657Z"
 last_activity: 2026-08-19
 last_activity_desc: Phase 01 execution resumed (wave continue)
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-08-18)
 
 ## Current Position
 
-Phase: 01 (Secure Vault Setup & Unlock) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 01
-Last activity: 2026-08-19 — Phase 01 execution resumed (wave continue)
+Phase: 01 (Secure Vault Setup & Unlock) — COMPLETE (5/5 plans, 35/35 UAT tests passing, both gaps resolved)
+Plan: 5 of 5
+Status: Phase 01 complete — ready for orchestrator to update ROADMAP.md and transition to Phase 02
+Last activity: 2026-08-19 — Plan 01-05 executed: gap G-01-31 closed (Windows dev-stack Ctrl-C shutdown), human checkpoint approved
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -54,6 +54,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P05 | 95min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -65,6 +70,8 @@ Recent decisions affecting current work:
 - Roadmap: Crypto/storage + unlock/session/auto-lock combined into a single Phase 1 (coarse granularity) — nothing else can be safely built before the key-derivation and session model is correct.
 - Roadmap: Backup/restore (BACKUP-01/02) treated as v1-critical, bundled into Phase 3 alongside clipboard/audit trust features, not deferred to v1.x — there is no cloud sync safety net for this project.
 - Roadmap: OCR (Phase 4) sequenced last and scoped to depend only on the Phase 1 app shell — research confirms it is architecturally decoupled from vault crypto/session, so it can't block or be blocked by vault work.
+- [Phase ?]: Resolve TypeScript/Vite dev-tool entrypoints via package.json bin fields (not require.resolve deep specifiers) to bypass Windows script shims — Vite's exports map rejects any ./bin/* deep specifier
+- [Phase ?]: Windows-only detached:true child spawn isolates each dev-stack child into its own console-detached process group, immune to the console-wide Ctrl-C broadcast; killTree is now async and awaited before dev.mjs exits
 
 ### Pending Todos
 
@@ -85,6 +92,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-19T01:10:00.000Z
-Stopped at: Plan 01-05 Task 3 (checkpoint:human-verify) — awaiting real interactive PowerShell Ctrl-C verification (UAT test 31 / gap G-01-31 re-run). Tasks 1 and 2 committed and verified.
-Resume file: .planning/phases/01-secure-vault-setup-unlock/01-05-PLAN.md
+Last session: 2026-08-19T07:15:13.636Z
+Stopped at: Completed 01-05-PLAN.md — Phase 01 complete (35/35 UAT, gap G-01-31 closed)
+Resume file: None

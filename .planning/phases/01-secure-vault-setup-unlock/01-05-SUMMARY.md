@@ -162,6 +162,13 @@ None - no external service configuration required.
 - The dev-stack spawn/shutdown pattern established here (resolve real entrypoints, process-group-isolate on Windows, await every kill) is reusable for any future long-running dev tooling this project adds.
 - No blockers for Phase 02.
 
+## Self-Check: PASSED
+
+All created files confirmed present on disk (`scripts/dev-spec.mjs`, `scripts/dev-spec.d.mts`,
+`scripts/dev.mjs`, `scripts/verify-dev-shutdown.mjs`, `server/src/dev-script.test.ts`,
+`README.md`, this SUMMARY). All commit hashes confirmed present in `git log`
+(`56ae0fe`, `adabaa3`, `6b16069`, `ea42622`).
+
 ---
 *Phase: 01-secure-vault-setup-unlock*
 *Completed: 2026-08-19*
