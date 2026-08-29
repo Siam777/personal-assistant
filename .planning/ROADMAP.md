@@ -14,7 +14,7 @@ This roadmap delivers a local-first, "industry grade" encrypted vault plus a Goo
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Secure Vault Setup & Unlock** - Master password, envelope encryption, optional TOTP 2FA, and true session auto-lock (completed 2026-08-19)
-- [ ] **Phase 2: Vault Core — Entries, Organization & Search** - Create/organize/find every entry type (API keys, logins, notes, cards)
+- [x] **Phase 2: Vault Core — Entries, Organization & Search** - Create/organize/find every entry type (API keys, logins, notes, cards) (completed 2026-08-29)
 - [ ] **Phase 3: Trust, Backup & Recovery** - Leak-resistant clipboard copy, access audit log, encrypted backup/restore
 - [ ] **Phase 4: OCR Lens Module** - Upload/drag and live-camera text extraction with editable preview and one-tap copy
 
@@ -104,8 +104,21 @@ Plans:
   4. User can export the entire vault as a single encrypted backup file.
   5. User can restore the vault from an encrypted backup file and get every entry back intact.
 
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+- [x] 03-01-PLAN.md — Audit Logging Subsystem (schema, recorder, query API, and lifecycle events)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 03-02-PLAN.md — Clipboard 1-Action Copy & 30-Second Auto-Clear with audit logging
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 03-03-PLAN.md — Encrypted Backup Export & Restore Engine (Argon2id + AES-256-GCM envelope)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 03-04-PLAN.md — UI Integration: Audit Log Modal, Backup & Restore Modal, and Header Controls
 
 ### Phase 4: OCR Lens Module
 
@@ -120,8 +133,21 @@ Plans:
   3. Extracted text appears in an editable preview before being used, so the user can catch and fix misreads.
   4. User can copy the previewed extracted text to the clipboard in one action.
 
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+- [x] 04-01-PLAN.md — Core OCR Engine & Pre-processing (Tesseract.js worker, downscaling, confidence)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 04-02-PLAN.md — Image Ingestion (Dropzone, file picker, clipboard paste)
+
+**Wave 3** *(blocked on Wave 1 completion)*
+- [x] 04-03-PLAN.md — Live Camera Capture & Viewfinder
+
+**Wave 4** *(blocked on Wave 2 and Wave 3 completion)*
+- [x] 04-04-PLAN.md — Lens UI Integration & Hub Navigation Switcher
 
 ## Progress
 
@@ -131,6 +157,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Secure Vault Setup & Unlock | 5/5 | Complete    | 2026-08-19 |
-| 2. Vault Core — Entries, Organization & Search | 4/4 | In Progress|  |
-| 3. Trust, Backup & Recovery | 0/TBD | Not started | - |
-| 4. OCR Lens Module | 0/TBD | Not started | - |
+| 2. Vault Core — Entries, Organization & Search | 4/4 | Complete    | 2026-08-29 |
+| 3. Trust, Backup & Recovery | 4/4 | Complete    | 2026-08-29 |
+| 4. OCR Lens Module | 4/4 | Complete    | 2026-08-29 |
+
+

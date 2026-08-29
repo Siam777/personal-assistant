@@ -7,9 +7,11 @@ import { requireSameOriginForMutations } from "./middleware/sameOrigin.js";
 import { logError, logInfo } from "./log.js";
 import { vaultRouter } from "./modules/auth/routes.js";
 import { entriesRouter } from "./modules/vault-entries/routes.js";
+import { auditRouter } from "./modules/audit/routes.js";
+import { backupRouter } from "./modules/backup/routes.js";
 
 /**
- * Configured Express app: a small-size-limited JSON body parser, a
+ * Configured Express app: a size-limited JSON body parser, a
  * same-origin gate on every state-changing request (WR-04), routes mounted
  * under `/api`, and `errorHandler` registered last. No route here ever
  * writes to standard output directly — anything worth reporting goes
@@ -18,12 +20,14 @@ import { entriesRouter } from "./modules/vault-entries/routes.js";
 export function createApp(): Express {
   const app = express();
 
-  app.use(express.json({ limit: "100kb" }));
+  app.use(express.json({ limit: "5mb" }));
   app.use(requireSameOriginForMutations);
 
   app.use("/api/vault", vaultRouter);
   // vaultRouter matches first, so /status, /init, /unlock, /lock, and
   // /2fa/* never reach entriesRouter's requireUnlocked gate.
+  app.use("/api/vault/audit", auditRouter);
+  app.use("/api/vault/backup", backupRouter);
   app.use("/api/vault", entriesRouter);
 
   app.use(errorHandler);

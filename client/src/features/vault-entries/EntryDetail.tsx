@@ -13,7 +13,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { deleteEntry, getEntry, type Entry, type EntryType } from "../../lib/api";
+import { deleteEntry, getEntry, reportAuditEvent, type Entry, type EntryType } from "../../lib/api";
+import { CopyButton } from "../../components/CopyButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -123,6 +124,15 @@ export default function EntryDetail({ entryId, onEdit, onDeleted }: EntryDetailP
       } else {
         next.add(key);
         armRevealTimer(key);
+        if (entry) {
+          void reportAuditEvent({
+            eventType: "secret_revealed",
+            entryId: entry.id,
+            entryName: entry.name,
+            entryType: entry.type,
+            fieldName: key,
+          });
+        }
       }
       return next;
     });
@@ -195,9 +205,29 @@ export default function EntryDetail({ entryId, onEdit, onDeleted }: EntryDetailP
                       <Eye className="size-5" aria-hidden="true" />
                     )}
                   </button>
+                  <CopyButton
+                    value={rawValue}
+                    label={cfg.label}
+                    entryId={entry.id}
+                    entryName={entry.name}
+                    entryType={entry.type}
+                    fieldName={cfg.key}
+                    isSecret={true}
+                  />
                 </div>
               ) : (
-                <span className="text-base">{rawValue}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{rawValue}</span>
+                  <CopyButton
+                    value={rawValue}
+                    label={cfg.label}
+                    entryId={entry.id}
+                    entryName={entry.name}
+                    entryType={entry.type}
+                    fieldName={cfg.key}
+                    isSecret={false}
+                  />
+                </div>
               )}
             </div>
           );

@@ -36,6 +36,7 @@ import {
   vaultExists,
   writeVaultMetaAtomic,
 } from "./vaultMeta.js";
+import { recordAuditEvent, extractClientInfo } from "../audit/audit.js";
 
 // Loaded once at module scope, not per-request — dictionary/graph assembly
 // is comparatively expensive and the data never changes for this process.
@@ -150,7 +151,16 @@ vaultRouter.post("/init", validate(initBodySchema), (req, res, next) => {
       masterKey = null;
 
       session.unlockSession(vaultKey, db);
+      const unlockedDb = session.getDb();
       db = null; // ownership transferred to the session singleton
+
+      const clientInfo = extractClientInfo(req);
+      await recordAuditEvent(unlockedDb, {
+        eventType: "vault_unlocked",
+        details: { action: "vault_initialized" },
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
 
       const status: VaultStatus = {
         initialized: true,
@@ -260,10 +270,18 @@ vaultRouter.post(
         }
 
         session.unlockSession(vaultKey, db);
+        const unlockedDb = session.getDb();
         db = null; // ownership transferred to the session singleton
 
         masterKey.fill(0);
         masterKey = null;
+
+        const clientInfo = extractClientInfo(req);
+        await recordAuditEvent(unlockedDb, {
+          eventType: "vault_unlocked",
+          ipAddress: clientInfo.ipAddress,
+          userAgent: clientInfo.userAgent,
+        });
 
         const status: VaultStatus = {
           initialized: true,
@@ -299,9 +317,23 @@ vaultRouter.post(
  * client fires this from page lifecycle events that may or may not have a
  * live session behind them (`session-signals.ts`).
  */
-vaultRouter.post("/lock", (_req, res) => {
-  session.lock();
-  res.status(204).end();
+vaultRouter.post("/lock", (req, res, next) => {
+  void (async () => {
+    try {
+      if (session.isUnlocked()) {
+        const clientInfo = extractClientInfo(req);
+        await recordAuditEvent(session.getDb(), {
+          eventType: "vault_locked",
+          ipAddress: clientInfo.ipAddress,
+          userAgent: clientInfo.userAgent,
+        });
+      }
+      session.lock();
+      res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  })();
 });
 
 /**
@@ -378,6 +410,14 @@ vaultRouter.post(
           next(vaultAuthError());
           return;
         }
+        if (session.isUnlocked()) {
+          const clientInfo = extractClientInfo(req);
+          await recordAuditEvent(session.getDb(), {
+            eventType: "two_factor_enabled",
+            ipAddress: clientInfo.ipAddress,
+            userAgent: clientInfo.userAgent,
+          });
+        }
         res.status(200).json(result);
       } catch {
         next(vaultAuthError());
@@ -411,6 +451,14 @@ vaultRouter.post(
       try {
         await reauthenticateWithMasterPassword(masterPassword);
         disableTotp();
+        if (session.isUnlocked()) {
+          const clientInfo = extractClientInfo(req);
+          await recordAuditEvent(session.getDb(), {
+            eventType: "two_factor_disabled",
+            ipAddress: clientInfo.ipAddress,
+            userAgent: clientInfo.userAgent,
+          });
+        }
         res.status(204).end();
       } catch {
         next(vaultAuthError());
@@ -444,6 +492,15 @@ vaultRouter.post(
         const { codes, hashes } = generateBackupCodes();
         meta.totp.backupCodeHashes = hashes;
         writeVaultMetaAtomic(meta);
+
+        if (session.isUnlocked()) {
+          const clientInfo = extractClientInfo(req);
+          await recordAuditEvent(session.getDb(), {
+            eventType: "backup_codes_regenerated",
+            ipAddress: clientInfo.ipAddress,
+            userAgent: clientInfo.userAgent,
+          });
+        }
 
         res.status(200).json({ backupCodes: codes });
       } catch {

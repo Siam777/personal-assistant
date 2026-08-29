@@ -444,3 +444,105 @@ export async function listTags(): Promise<Tag[]> {
   }
   return (await res.json()) as Tag[];
 }
+
+// --- Audit Logs (Phase 3 Plan 1 & 2) --------------------------------------
+
+export interface AuditLog {
+  id: string;
+  eventType: string;
+  entryId: string | null;
+  entryName: string | null;
+  entryType: string | null;
+  details: Record<string, unknown> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogListResponse {
+  logs: AuditLog[];
+  total: number;
+}
+
+export interface AuditLogQueryOptions {
+  limit?: number;
+  offset?: number;
+  eventType?: string;
+  entryId?: string;
+}
+
+/** Requires an unlocked session. */
+export async function getAuditLogs(options: AuditLogQueryOptions = {}): Promise<AuditLogListResponse> {
+  const params = new URLSearchParams();
+  if (options.limit != null) params.set("limit", String(options.limit));
+  if (options.offset != null) params.set("offset", String(options.offset));
+  if (options.eventType) params.set("eventType", options.eventType);
+  if (options.entryId) params.set("entryId", options.entryId);
+  const queryStr = params.toString();
+  const url = queryStr ? `/api/vault/audit?${queryStr}` : "/api/vault/audit";
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  return (await res.json()) as AuditLogListResponse;
+}
+
+export async function reportAuditEvent(event: {
+  eventType: "secret_revealed" | "secret_copied" | "vault_locked";
+  entryId?: string;
+  entryName?: string;
+  entryType?: string;
+  fieldName?: string;
+  details?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await fetch("/api/vault/audit/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(event),
+    });
+  } catch {
+    // Best effort reporting
+  }
+}
+
+// --- Backup & Recovery (Phase 3 Plan 3 & 4) --------------------------------
+
+export interface BackupContainer {
+  version: 1;
+  createdAt: string;
+  app: "personal-assistant-vault";
+  kdf: {
+    type: "argon2id";
+    memoryCost: number;
+    timeCost: number;
+    parallelism: number;
+    hashLength: number;
+    saltB64: string;
+  };
+  encryption: {
+    cipher: "aes-256-gcm";
+    ivB64: string;
+    authTagB64: string;
+  };
+  ciphertextB64: string;
+}
+
+/** Requires an unlocked session. */
+export async function exportBackup(password: string): Promise<BackupContainer> {
+  return postJson<BackupContainer>("/api/vault/backup/export", { password });
+}
+
+/** Requires an unlocked session. */
+export async function restoreBackup(
+  backupData: unknown,
+  password: string,
+  mode: "merge" | "overwrite"
+): Promise<{ restoredCount: number; mode: string }> {
+  return postJson<{ restoredCount: number; mode: string }>("/api/vault/backup/restore", {
+    backupData,
+    password,
+    mode,
+  });
+}
+

@@ -12,25 +12,27 @@ Secrets stored in the vault are always safe (real encryption, never plaintext) a
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] User can store and retrieve API keys (with metadata like endpoint/model/notes) (Phase 2)
+- [x] User can store and retrieve passwords/logins (username + password + URL) (Phase 2)
+- [x] User can store secure freeform notes (recovery codes, SSH keys, config snippets) (Phase 2)
+- [x] User can store cards/other structured sensitive data (Phase 2)
+- [x] User can organize vault entries with folders/categories (Phase 2)
+- [x] User can organize vault entries with tags, and filter by tag (Phase 2)
+- [x] User can search across all vault entries (Phase 2)
+- [x] Vault unlocks with a master password (Phase 1)
+- [x] User can optionally enable 2FA (TOTP) on top of the master password (Phase 1)
+- [x] All secrets are encrypted at rest — no plaintext ever stored or logged (Phase 1)
+- [x] User can view an audit log of when/where a secret was accessed (Phase 3)
+- [x] User can export and restore encrypted backups of the vault (Phase 3)
+- [x] User can copy secrets with 1 action and 30s auto-clear (Phase 3)
+- [x] User can upload or drag an image to extract text from it (OCR) (Phase 4)
+- [x] User can use a live camera capture to extract text from what's in view (Phase 4)
+- [x] Extracted text is shown in a preview before being copied/used (Lens-style) (Phase 4)
+- [x] User can copy extracted text to clipboard in one action (Phase 4)
 
 ### Active
 
-- [ ] User can store and retrieve API keys (with metadata like endpoint/model/notes)
-- [ ] User can store and retrieve passwords/logins (username + password + URL)
-- [ ] User can store secure freeform notes (recovery codes, SSH keys, config snippets)
-- [ ] User can store cards/other structured sensitive data
-- [ ] User can organize vault entries with folders/categories
-- [ ] User can organize vault entries with tags, and filter by tag
-- [ ] User can search across all vault entries
-- [ ] Vault unlocks with a master password
-- [ ] User can optionally enable 2FA (TOTP) on top of the master password
-- [ ] All secrets are encrypted at rest — no plaintext ever stored or logged
-- [ ] User can view an audit log of when/where a secret was accessed
-- [ ] User can upload or drag an image to extract text from it (OCR)
-- [ ] User can use a live camera capture to extract text from what's in view
-- [ ] Extracted text is shown in a preview before being copied/used (Lens-style)
-- [ ] User can copy extracted text to clipboard in one action
+(None — Milestone v1.0 complete)
 
 ### Out of Scope
 

@@ -39,4 +39,15 @@ export interface VaultDbSchema {
     entry_id: string;
     tag_id: string;
   };
+  audit_logs: {
+    id: string;
+    event_type: string;
+    entry_id: string | null;
+    entry_name: string | null;
+    entry_type: string | null;
+    details: string | null;
+    ip_address: string | null;
+    user_agent: string | null;
+    created_at: string;
+  };
 }

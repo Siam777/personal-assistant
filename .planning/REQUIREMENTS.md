@@ -31,21 +31,21 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Trust & Access
 
-- [ ] **TRUST-01**: User can copy a secret to the clipboard with one action
-- [ ] **TRUST-02**: Clipboard is automatically cleared a short time after a vault secret is copied
-- [ ] **TRUST-03**: User can view an audit log of when/where each secret was accessed, without secret values appearing in the log
+- [x] **TRUST-01**: User can copy a secret to the clipboard with one action
+- [x] **TRUST-02**: Clipboard is automatically cleared a short time after a vault secret is copied
+- [x] **TRUST-03**: User can view an audit log of when/where each secret was accessed, without secret values appearing in the log
 
 ### Backup
 
-- [ ] **BACKUP-01**: User can export the entire vault as a single encrypted backup file
-- [ ] **BACKUP-02**: User can restore the vault from an encrypted backup file
+- [x] **BACKUP-01**: User can export the entire vault as a single encrypted backup file
+- [x] **BACKUP-02**: User can restore the vault from an encrypted backup file
 
 ### OCR (Image-to-Text)
 
-- [ ] **OCR-01**: User can upload or drag an image to extract text from it
-- [ ] **OCR-02**: User can use live camera capture to extract text from what's in view
-- [ ] **OCR-03**: Extracted text is shown in an editable preview before being used (Lens-style, catches misreads)
-- [ ] **OCR-04**: User can copy the previewed extracted text to clipboard in one action
+- [x] **OCR-01**: User can upload or drag an image to extract text from it
+- [x] **OCR-02**: User can use live camera capture to extract text from what's in view
+- [x] **OCR-03**: Extracted text is shown in an editable preview before being used (Lens-style, catches misreads)
+- [x] **OCR-04**: User can copy the previewed extracted text to clipboard in one action
 
 ## v2 Requirements
 
@@ -100,15 +100,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ORG-01 | Phase 2 | Complete |
 | ORG-02 | Phase 2 | Complete |
 | ORG-03 | Phase 2 | Complete |
-| TRUST-01 | Phase 3 | Pending |
-| TRUST-02 | Phase 3 | Pending |
-| TRUST-03 | Phase 3 | Pending |
-| BACKUP-01 | Phase 3 | Pending |
-| BACKUP-02 | Phase 3 | Pending |
-| OCR-01 | Phase 4 | Pending |
-| OCR-02 | Phase 4 | Pending |
-| OCR-03 | Phase 4 | Pending |
-| OCR-04 | Phase 4 | Pending |
+| TRUST-01 | Phase 3 | Complete |
+| TRUST-02 | Phase 3 | Complete |
+| TRUST-03 | Phase 3 | Complete |
+| BACKUP-01 | Phase 3 | Complete |
+| BACKUP-02 | Phase 3 | Complete |
+| OCR-01 | Phase 4 | Complete |
+| OCR-02 | Phase 4 | Complete |
+| OCR-03 | Phase 4 | Complete |
+| OCR-04 | Phase 4 | Complete |
 
 **Coverage:**
 

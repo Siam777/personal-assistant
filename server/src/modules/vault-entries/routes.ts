@@ -37,6 +37,8 @@ import {
   folderCreateSchema,
   folderRenameSchema,
 } from "./schemas.js";
+import { recordAuditEvent, extractClientInfo } from "../audit/audit.js";
+import * as session from "../auth/session.js";
 
 export const entriesRouter = Router();
 
@@ -63,6 +65,16 @@ entriesRouter.post("/entries", validate(entryCreateSchema), (req, res, next) => 
   void (async () => {
     try {
       const created = await createEntry(req.body as z.infer<typeof entryCreateSchema>);
+      const db = session.getDb();
+      const clientInfo = extractClientInfo(req);
+      await recordAuditEvent(db, {
+        eventType: "entry_created",
+        entryId: created.id,
+        entryName: created.name,
+        entryType: created.type,
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
       res.status(201).json(created);
     } catch (err) {
       next(err);
@@ -72,10 +84,18 @@ entriesRouter.post("/entries", validate(entryCreateSchema), (req, res, next) => 
 
 // Defined before any parameterized POST /entries/:id/... route below, so
 // the literal "trash" segment is never captured as an :id value.
-entriesRouter.post("/entries/trash/empty", (_req, res, next) => {
+entriesRouter.post("/entries/trash/empty", (req, res, next) => {
   void (async () => {
     try {
       const removed = await emptyTrash();
+      const db = session.getDb();
+      const clientInfo = extractClientInfo(req);
+      await recordAuditEvent(db, {
+        eventType: "entry_deleted",
+        details: { action: "empty_trash", count: removed },
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
       res.json({ removed });
     } catch (err) {
       next(err);
@@ -91,6 +111,17 @@ entriesRouter.post("/entries/:id/restore", (req, res, next) => {
         res.status(404).json({ error: "Entry not found" });
         return;
       }
+      const db = session.getDb();
+      const clientInfo = extractClientInfo(req);
+      await recordAuditEvent(db, {
+        eventType: "entry_updated",
+        entryId: restored.id,
+        entryName: restored.name,
+        entryType: restored.type,
+        details: { action: "restore_from_trash" },
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
       res.json(restored);
     } catch (err) {
       next(err);
@@ -106,6 +137,15 @@ entriesRouter.delete("/entries/:id/permanent", (req, res, next) => {
         res.status(404).json({ error: "Entry not found" });
         return;
       }
+      const db = session.getDb();
+      const clientInfo = extractClientInfo(req);
+      await recordAuditEvent(db, {
+        eventType: "entry_deleted",
+        entryId: req.params.id as string,
+        details: { action: "permanent_delete" },
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
       res.status(204).end();
     } catch (err) {
       next(err);
@@ -121,6 +161,16 @@ entriesRouter.get("/entries/:id", (req, res, next) => {
         res.status(404).json({ error: "Entry not found" });
         return;
       }
+      const db = session.getDb();
+      const clientInfo = extractClientInfo(req);
+      await recordAuditEvent(db, {
+        eventType: "entry_viewed",
+        entryId: entry.id,
+        entryName: entry.name,
+        entryType: entry.type,
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
       res.json(entry);
     } catch (err) {
       next(err);
@@ -139,6 +189,16 @@ entriesRouter.patch("/entries/:id", validate(entryUpdateSchema), (req, res, next
         res.status(404).json({ error: "Entry not found" });
         return;
       }
+      const db = session.getDb();
+      const clientInfo = extractClientInfo(req);
+      await recordAuditEvent(db, {
+        eventType: "entry_updated",
+        entryId: updated.id,
+        entryName: updated.name,
+        entryType: updated.type,
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
       res.json(updated);
     } catch (err) {
       if (err instanceof EntryTypeImmutableError) {
@@ -158,6 +218,15 @@ entriesRouter.delete("/entries/:id", (req, res, next) => {
         res.status(404).json({ error: "Entry not found" });
         return;
       }
+      const db = session.getDb();
+      const clientInfo = extractClientInfo(req);
+      await recordAuditEvent(db, {
+        eventType: "entry_deleted",
+        entryId: req.params.id as string,
+        details: { action: "trash" },
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
       res.status(204).end();
     } catch (err) {
       next(err);

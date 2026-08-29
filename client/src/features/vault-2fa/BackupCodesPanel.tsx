@@ -11,6 +11,7 @@
  */
 
 import { useState } from "react";
+import { copyToClipboard } from "../../lib/clipboard";
 
 interface BackupCodesPanelProps {
   codes: string[];
@@ -21,13 +22,16 @@ export default function BackupCodesPanel({ codes, onContinue }: BackupCodesPanel
   const [acknowledged, setAcknowledged] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
-  function handleCopy(): void {
-    navigator.clipboard
-      .writeText(codes.join("\n"))
-      .then(() => setCopyStatus("Copied to clipboard."))
-      .catch(() => {
-        setCopyStatus("Could not copy automatically — select and copy the codes below.");
-      });
+  async function handleCopy(): Promise<void> {
+    const success = await copyToClipboard(codes.join("\n"), {
+      label: "Backup codes",
+      isSecret: true,
+    });
+    if (success) {
+      setCopyStatus("Copied to clipboard (auto-clears in 30s).");
+    } else {
+      setCopyStatus("Could not copy automatically — select and copy the codes below.");
+    }
   }
 
   function handleDownload(): void {

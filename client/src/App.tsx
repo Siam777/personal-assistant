@@ -1,15 +1,26 @@
 import { useEffect, useState } from "react";
-import { getStatus, type VaultStatus } from "./lib/api";
+import { getStatus, lockVault, type VaultStatus } from "./lib/api";
 import { installSessionSignals } from "./lib/session-signals";
 import InitScreen from "./features/vault-unlock/InitScreen";
 import UnlockScreen from "./features/vault-unlock/UnlockScreen";
 import LockedNotice from "./features/vault-unlock/LockedNotice";
 import TwoFactorSettings from "./features/vault-2fa/TwoFactorSettings";
 import EntryListScreen from "./features/vault-entries/EntryListScreen";
+import { LensScreen } from "./features/lens/LensScreen";
+import { AuditLogModal } from "./features/vault-audit/AuditLogModal";
+import { BackupModal } from "./features/vault-backup/BackupModal";
+import { Toaster } from "./components/ui/sonner";
+import { Button } from "./components/ui/button";
+import {
+  Shield,
+  HardDriveDownload,
+  Lock,
+  Settings,
+  FolderKey,
+  ScanText,
+} from "lucide-react";
 
-/** The only two views reachable once the vault is unlocked. `settings` is
- * gated entirely by being nested inside the `status.unlocked` branch below —
- * there is no route that reaches it while the vault is locked. */
+type ActiveModule = "vault" | "lens";
 type UnlockedView = "vault" | "settings";
 
 // The client polls GET /api/vault/status on this interval so the UI notices
@@ -18,24 +29,14 @@ type UnlockedView = "vault" | "settings";
 // can never itself keep a session alive.
 const STATUS_POLL_INTERVAL_MS = 15_000;
 
-/**
- * Fetches vault status on mount and routes between the first-run creation
- * screen, the unlock screen, and the unlocked panel. Also installs the
- * browser session-lifecycle signals (accelerant-only, see
- * lib/session-signals.ts) and polls status so a server-side auto-lock is
- * reflected in the UI even if the user never touches the page again.
- */
 export default function App() {
+  const [activeModule, setActiveModule] = useState<ActiveModule>("vault");
   const [status, setStatus] = useState<VaultStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unlockedView, setUnlockedView] = useState<UnlockedView>("vault");
-  // Tracks whether the vault was seen unlocked at some point, so a poll
-  // that flips unlocked -> locked can route to LockedNotice instead of
-  // silently reusing UnlockScreen (the user should understand what
-  // happened, not just see a blank re-prompt). Deliberately state, not a
-  // ref (WR-01): "Unlock again" needs to schedule a re-render the moment
-  // it fires, not wait for the next unrelated poll/visibility event to
-  // happen to re-render this component.
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
+  const [entriesVersion, setEntriesVersion] = useState(0);
   const [wasUnlocked, setWasUnlocked] = useState(false);
 
   useEffect(() => {
@@ -63,8 +64,7 @@ export default function App() {
       getStatus()
         .then(setStatus)
         .catch(() => {
-          // Best-effort poll only — a transient failure here should not
-          // tear down the UI; the next tick tries again.
+          // Best-effort poll only — transient failure ignored
         });
     }, STATUS_POLL_INTERVAL_MS);
 
@@ -74,77 +74,179 @@ export default function App() {
     };
   }, []);
 
-  // A guarded render-phase state update: only calls the setter on the
-  // transition into "seen unlocked", so this does not loop — once
-  // `wasUnlocked` is true, the condition is false on every subsequent
-  // render until `onReturnToUnlock` resets it.
   if (status?.unlocked && !wasUnlocked) {
     setWasUnlocked(true);
   }
 
-  if (error) {
-    return (
-      <main>
-        <h1>Personal Assistant — Vault</h1>
-        <p role="alert">Error: {error}</p>
-      </main>
-    );
-  }
-
-  if (!status) {
-    return (
-      <main>
-        <h1>Personal Assistant — Vault</h1>
-        <p>Loading vault status…</p>
-      </main>
-    );
-  }
-
-  if (!status.initialized) {
-    return (
-      <main>
-        <h1>Personal Assistant — Vault</h1>
-        <InitScreen onInitialized={setStatus} />
-      </main>
-    );
-  }
-
-  if (status.unlocked) {
-    return (
-      <main>
-        <h1>Personal Assistant — Vault</h1>
-        {unlockedView === "settings" ? (
-          <>
-            <button type="button" onClick={() => setUnlockedView("vault")}>
-              Back to vault
-            </button>
-            <TwoFactorSettings totpEnabled={status.totpEnabled} onStatusChange={setStatus} />
-          </>
-        ) : (
-          <>
-            <EntryListScreen />
-            <button type="button" onClick={() => setUnlockedView("settings")}>
-              Two-factor authentication settings
-            </button>
-          </>
-        )}
-      </main>
-    );
-  }
-
-  if (wasUnlocked) {
-    return (
-      <main>
-        <h1>Personal Assistant — Vault</h1>
-        <LockedNotice onReturnToUnlock={() => setWasUnlocked(false)} />
-      </main>
-    );
+  async function handleLock() {
+    try {
+      await lockVault();
+      const next = await getStatus();
+      setStatus(next);
+    } catch {
+      // best-effort
+    }
   }
 
   return (
-    <main>
-      <h1>Personal Assistant — Vault</h1>
-      <UnlockScreen totpEnabled={status.totpEnabled} onUnlocked={setStatus} />
-    </main>
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
+      {/* Top Application Header */}
+      <header className="border-b bg-card/60 backdrop-blur sticky top-0 z-20 px-6 py-3 flex items-center justify-between gap-4">
+        {/* Left: Brand & Module Switcher */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <FolderKey className="size-6 text-primary" />
+            <h1 className="text-lg font-bold">Personal Assistant</h1>
+          </div>
+
+          <nav className="flex items-center bg-muted/60 p-1 rounded-lg border">
+            <button
+              type="button"
+              onClick={() => setActiveModule("vault")}
+              className={`flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                activeModule === "vault"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FolderKey className="size-4" />
+              <span>Vault</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveModule("lens")}
+              className={`flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                activeModule === "lens"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <ScanText className="size-4 text-primary" />
+              <span>Lens (OCR)</span>
+            </button>
+          </nav>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          {status?.unlocked && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setAuditOpen(true)}
+                className="flex items-center gap-1.5"
+              >
+                <Shield className="size-4 text-primary" />
+                <span>Audit Log</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setBackupOpen(true)}
+                className="flex items-center gap-1.5"
+              >
+                <HardDriveDownload className="size-4" />
+                <span>Backup & Recovery</span>
+              </Button>
+
+              {activeModule === "vault" &&
+                (unlockedView === "settings" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUnlockedView("vault")}
+                    className="flex items-center gap-1.5"
+                  >
+                    <FolderKey className="size-4" />
+                    <span>Vault</span>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUnlockedView("settings")}
+                    className="flex items-center gap-1.5"
+                  >
+                    <Settings className="size-4" />
+                    <span>2FA Settings</span>
+                  </Button>
+                ))}
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleLock}
+                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                title="Lock Vault"
+              >
+                <Lock className="size-4" />
+                <span>Lock</span>
+              </Button>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* Main Content View */}
+      <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
+        {activeModule === "lens" ? (
+          <LensScreen />
+        ) : error ? (
+          <div className="p-6 max-w-xl mx-auto">
+            <h2 className="text-xl font-bold mb-2">Vault Error</h2>
+            <p role="alert" className="text-destructive">{error}</p>
+          </div>
+        ) : !status ? (
+          <div className="p-6 max-w-xl mx-auto">
+            <p className="text-muted-foreground">Loading vault status…</p>
+          </div>
+        ) : !status.initialized ? (
+          <div className="max-w-2xl mx-auto">
+            <InitScreen onInitialized={setStatus} />
+          </div>
+        ) : status.unlocked ? (
+          unlockedView === "settings" ? (
+            <div className="max-w-2xl mx-auto space-y-6">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setUnlockedView("vault")}
+                className="mb-2"
+              >
+                ← Back to vault
+              </Button>
+              <TwoFactorSettings totpEnabled={status.totpEnabled} onStatusChange={setStatus} />
+            </div>
+          ) : (
+            <EntryListScreen key={entriesVersion} />
+          )
+        ) : wasUnlocked ? (
+          <div className="max-w-xl mx-auto">
+            <LockedNotice onReturnToUnlock={() => setWasUnlocked(false)} />
+          </div>
+        ) : (
+          <div className="max-w-xl mx-auto">
+            <UnlockScreen totpEnabled={status.totpEnabled} onUnlocked={setStatus} />
+          </div>
+        )}
+      </main>
+
+      <AuditLogModal open={auditOpen} onOpenChange={setAuditOpen} />
+      <BackupModal
+        open={backupOpen}
+        onOpenChange={setBackupOpen}
+        onRestored={() => setEntriesVersion((v) => v + 1)}
+      />
+      <Toaster position="top-right" richColors />
+    </div>
   );
 }

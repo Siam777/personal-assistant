@@ -111,6 +111,22 @@ export async function initSchema(db: Kysely<VaultDbSchema>): Promise<void> {
     .addPrimaryKeyConstraint("entry_tags_pk", ["entry_id", "tag_id"])
     .execute();
 
+  // audit_logs: append-only log of vault access & modifications (TRUST-03).
+  // Strictly no secret values are ever accepted or stored here.
+  await db.schema
+    .createTable("audit_logs")
+    .ifNotExists()
+    .addColumn("id", "text", (col) => col.primaryKey())
+    .addColumn("event_type", "text", (col) => col.notNull())
+    .addColumn("entry_id", "text")
+    .addColumn("entry_name", "text")
+    .addColumn("entry_type", "text")
+    .addColumn("details", "text")
+    .addColumn("ip_address", "text")
+    .addColumn("user_agent", "text")
+    .addColumn("created_at", "text", (col) => col.notNull())
+    .execute();
+
   await db.schema
     .createIndex("entries_deleted_at_idx")
     .ifNotExists()
@@ -128,5 +144,17 @@ export async function initSchema(db: Kysely<VaultDbSchema>): Promise<void> {
     .ifNotExists()
     .on("entry_tags")
     .column("tag_id")
+    .execute();
+  await db.schema
+    .createIndex("audit_logs_created_at_idx")
+    .ifNotExists()
+    .on("audit_logs")
+    .column("created_at")
+    .execute();
+  await db.schema
+    .createIndex("audit_logs_entry_id_idx")
+    .ifNotExists()
+    .on("audit_logs")
+    .column("entry_id")
     .execute();
 }

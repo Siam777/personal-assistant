@@ -10,6 +10,7 @@
  */
 
 import { getStatus, lockVault, type VaultStatus } from "./api";
+import { clearClipboardImmediately } from "./clipboard";
 
 /**
  * Registers `pagehide` and `visibilitychange` handlers:
@@ -28,6 +29,7 @@ export function installSessionSignals(
 ): () => void {
   function handleVisibilityOrHide(): void {
     if (document.visibilityState === "hidden") {
+      clearClipboardImmediately();
       void lockVault();
     } else {
       getStatus()
@@ -40,6 +42,7 @@ export function installSessionSignals(
   }
 
   function handlePageHide(): void {
+    clearClipboardImmediately();
     void lockVault();
   }
 
